@@ -178,6 +178,21 @@
         <p>Try different visualization modes and make some noise to see the magic happen!</p>
     </div>
 
-    <script src="visualizer.js"></script>
+    <!-- Load base classes first -->
+    <script src="audio-visualizer.js"></script>
+    <script src="visualizations/base-visualization.js"></script>
+
+    <!-- Load all visualization modules -->
+    <script src="visualizations/frequency-bars.js"></script>
+    <script src="visualizations/waveform.js"></script>
+    <script src="visualizations/circular-spectrum.js"></script>
+    <script src="visualizations/combined-view.js"></script>
+    <script src="visualizations/hexagonal-grid.js"></script>
+    <script src="visualizations/rotating-hexagons.js"></script>
+    <script src="visualizations/psychedelic-particles.js"></script>
+    <script src="visualizations/kaleidoscope.js"></script>
+    <script src="visualizations/fractal-tree.js"></script>
+    <script src="visualizations/fractal-spiral.js"></script>
+    <script src="visualizations/fractal-mandala.js"></script>
 </body>
 </html>
