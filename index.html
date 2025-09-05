@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sound Visualizer</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #000;
+            color: #fff;
+            font-family: 'Courier New', monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .header {
+            padding: 20px;
+            text-align: center;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 2.5em;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4, #45b7d1, #96ceb4);
+            background-size: 400% 400%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: gradient 3s ease infinite;
+        }
+
+        @keyframes gradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .controls {
+            margin: 20px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        button {
+            background: linear-gradient(45deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .visualization-container {
+            position: relative;
+            margin: 20px;
+            border: 2px solid #333;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        canvas {
+            display: block;
+            background: radial-gradient(circle at center, #1a1a2e 0%, #16213e 50%, #0f0f23 100%);
+        }
+
+        .mode-selector {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .mode-selector label {
+            font-size: 14px;
+            color: #ccc;
+        }
+
+        select {
+            background: #333;
+            color: #fff;
+            border: 1px solid #555;
+            padding: 8px 12px;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+        .info {
+            margin-top: 20px;
+            text-align: center;
+            color: #888;
+            font-size: 14px;
+            max-width: 600px;
+            line-height: 1.5;
+        }
+
+        .status {
+            margin: 10px;
+            padding: 10px 20px;
+            border-radius: 5px;
+            font-size: 14px;
+            text-align: center;
+            min-width: 200px;
+        }
+
+        .status.waiting {
+            background: #ffa500;
+            color: #000;
+        }
+
+        .status.active {
+            background: #4caf50;
+            color: #fff;
+        }
+
+        .status.error {
+            background: #f44336;
+            color: #fff;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🎵 Sound Visualizer 🎵</h1>
+    </div>
+
+    <div class="controls">
+        <button id="startBtn">Start Visualization</button>
+        <button id="stopBtn" disabled>Stop</button>
+        
+        <div class="mode-selector">
+            <label for="visualMode">Mode:</label>
+            <select id="visualMode">
+                <option value="frequency">Frequency Bars</option>
+                <option value="waveform">Waveform</option>
+                <option value="circular">Circular Spectrum</option>
+                <option value="combined">Combined View</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="status" id="status">Click "Start Visualization" to begin</div>
+
+    <div class="visualization-container">
+        <canvas id="visualizer" width="800" height="400"></canvas>
+    </div>
+
+    <div class="info">
+        <p>This visualizer uses your microphone to create real-time audio visualizations.</p>
+        <p>Make sure to allow microphone access when prompted by your browser.</p>
+        <p>Try different visualization modes and make some noise to see the magic happen!</p>
+    </div>
+
+    <script src="visualizer.js"></script>
+</body>
+</html>
