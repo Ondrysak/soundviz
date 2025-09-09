@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>D3.js Visualizations</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 3em;
+            margin: 0;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4, #45b7d1, #96ceb4);
+            background-size: 400% 400%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: gradient 3s ease infinite;
+        }
+
+        @keyframes gradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        button:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        button.active {
+            background: rgba(255, 255, 255, 0.4);
+            border-color: rgba(255, 255, 255, 0.6);
+        }
+
+        .visualization-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        .viz-container {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .viz-title {
+            font-size: 1.5em;
+            margin-bottom: 15px;
+            text-align: center;
+            color: #fff;
+        }
+
+        .viz-content {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            padding: 15px;
+            min-height: 300px;
+        }
+
+        .axis {
+            font-size: 12px;
+        }
+
+        .axis path,
+        .axis line {
+            fill: none;
+            stroke: #fff;
+            shape-rendering: crispEdges;
+        }
+
+        .axis text {
+            fill: #fff;
+        }
+
+        .bar {
+            fill: #4ecdc4;
+            transition: fill 0.3s ease;
+        }
+
+        .bar:hover {
+            fill: #ff6b6b;
+        }
+
+        .dot {
+            fill: #45b7d1;
+            stroke: #fff;
+            stroke-width: 2px;
+            transition: all 0.3s ease;
+        }
+
+        .dot:hover {
+            fill: #ff6b6b;
+            r: 8;
+        }
+
+        .link {
+            stroke: rgba(255, 255, 255, 0.6);
+            stroke-width: 1px;
+        }
+
+        .node {
+            fill: #4ecdc4;
+            stroke: #fff;
+            stroke-width: 2px;
+            cursor: pointer;
+        }
+
+        .node:hover {
+            fill: #ff6b6b;
+        }
+
+        .line {
+            fill: none;
+            stroke: #96ceb4;
+            stroke-width: 2px;
+        }
+
+        .area {
+            fill: rgba(150, 206, 180, 0.3);
+        }
+
+        .tooltip {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 5px;
+            font-size: 12px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        @media (max-width: 768px) {
+            .visualization-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 D3.js Interactive Visualizations 📊</h1>
+            <p>Explore beautiful data visualizations powered by D3.js</p>
+        </div>
+
+        <div class="controls">
+            <button id="refreshData" onclick="refreshAllData()">🔄 Refresh Data</button>
+            <button id="animateBtn" onclick="toggleAnimation()">🎬 Toggle Animation</button>
+            <button id="randomizeBtn" onclick="randomizeData()">🎲 Randomize</button>
+        </div>
+
+        <div class="visualization-grid">
+            <div class="viz-container">
+                <div class="viz-title">📊 Interactive Bar Chart</div>
+                <div class="viz-content" id="barChart"></div>
+            </div>
+
+            <div class="viz-container">
+                <div class="viz-title">🔵 Animated Scatter Plot</div>
+                <div class="viz-content" id="scatterPlot"></div>
+            </div>
+
+            <div class="viz-container">
+                <div class="viz-title">🌐 Force-Directed Graph</div>
+                <div class="viz-content" id="forceGraph"></div>
+            </div>
+
+            <div class="viz-container">
+                <div class="viz-title">📈 Dynamic Line Chart</div>
+                <div class="viz-content" id="lineChart"></div>
+            </div>
+
+            <div class="viz-container">
+                <div class="viz-title">🍰 Interactive Pie Chart</div>
+                <div class="viz-content" id="pieChart"></div>
+            </div>
+
+            <div class="viz-container">
+                <div class="viz-title">🌡️ Heatmap Visualization</div>
+                <div class="viz-content" id="heatmap"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="tooltip" id="tooltip"></div>
+
+    <script>
+        // Global variables
+        let animationEnabled = true;
+        let currentData = generateRandomData();
+
+        // Generate random data for visualizations
+        function generateRandomData() {
+            return {
+                barData: Array.from({length: 8}, (_, i) => ({
+                    name: `Item ${i + 1}`,
+                    value: Math.random() * 100 + 10
+                })),
+                scatterData: Array.from({length: 50}, () => ({
+                    x: Math.random() * 100,
+                    y: Math.random() * 100,
+                    size: Math.random() * 10 + 3
+                })),
+                lineData: Array.from({length: 20}, (_, i) => ({
+                    x: i,
+                    y: Math.random() * 50 + 25 + Math.sin(i * 0.5) * 15
+                })),
+                pieData: [
+                    {name: 'Category A', value: Math.random() * 30 + 10},
+                    {name: 'Category B', value: Math.random() * 30 + 10},
+                    {name: 'Category C', value: Math.random() * 30 + 10},
+                    {name: 'Category D', value: Math.random() * 30 + 10},
+                    {name: 'Category E', value: Math.random() * 30 + 10}
+                ],
+                networkData: {
+                    nodes: Array.from({length: 15}, (_, i) => ({id: i, group: Math.floor(i / 5)})),
+                    links: Array.from({length: 20}, () => ({
+                        source: Math.floor(Math.random() * 15),
+                        target: Math.floor(Math.random() * 15)
+                    }))
+                },
+                heatmapData: Array.from({length: 10}, (_, i) => 
+                    Array.from({length: 10}, (_, j) => ({
+                        row: i,
+                        col: j,
+                        value: Math.random()
+                    }))
+                ).flat()
+            };
+        }
+
+        // Tooltip functions
+        function showTooltip(event, text) {
+            const tooltip = d3.select('#tooltip');
+            tooltip.style('opacity', 1)
+                   .html(text)
+                   .style('left', (event.pageX + 10) + 'px')
+                   .style('top', (event.pageY - 10) + 'px');
+        }
+
+        function hideTooltip() {
+            d3.select('#tooltip').style('opacity', 0);
+        }
+
+        // Control functions
+        function refreshAllData() {
+            currentData = generateRandomData();
+            initializeAllVisualizations();
+        }
+
+        function toggleAnimation() {
+            animationEnabled = !animationEnabled;
+            const btn = document.getElementById('animateBtn');
+            btn.textContent = animationEnabled ? '🎬 Toggle Animation' : '⏸️ Toggle Animation';
+            btn.classList.toggle('active');
+        }
+
+        function randomizeData() {
+            refreshAllData();
+        }
+
+        // Initialize all visualizations
+        function initializeAllVisualizations() {
+            createBarChart();
+            createScatterPlot();
+            createForceGraph();
+            createLineChart();
+            createPieChart();
+            createHeatmap();
+        }
+
+        // Bar Chart Implementation
+        function createBarChart() {
+            const container = d3.select('#barChart');
+            container.selectAll('*').remove();
+
+            const margin = {top: 20, right: 30, bottom: 40, left: 40};
+            const width = 460 - margin.left - margin.right;
+            const height = 280 - margin.top - margin.bottom;
+
+            const svg = container.append('svg')
+                .attr('width', width + margin.left + margin.right)
+                .attr('height', height + margin.top + margin.bottom);
+
+            const g = svg.append('g')
+                .attr('transform', `translate(${margin.left},${margin.top})`);
+
+            const x = d3.scaleBand()
+                .rangeRound([0, width])
+                .padding(0.1)
+                .domain(currentData.barData.map(d => d.name));
+
+            const y = d3.scaleLinear()
+                .rangeRound([height, 0])
+                .domain([0, d3.max(currentData.barData, d => d.value)]);
+
+            g.append('g')
+                .attr('class', 'axis')
+                .attr('transform', `translate(0,${height})`)
+                .call(d3.axisBottom(x));
+
+            g.append('g')
+                .attr('class', 'axis')
+                .call(d3.axisLeft(y));
+
+            const bars = g.selectAll('.bar')
+                .data(currentData.barData)
+                .enter().append('rect')
+                .attr('class', 'bar')
+                .attr('x', d => x(d.name))
+                .attr('width', x.bandwidth())
+                .attr('y', height)
+                .attr('height', 0)
+                .on('mouseover', function(event, d) {
+                    showTooltip(event, `${d.name}: ${d.value.toFixed(1)}`);
+                })
+                .on('mouseout', hideTooltip);
+
+            if (animationEnabled) {
+                bars.transition()
+                    .duration(1000)
+                    .attr('y', d => y(d.value))
+                    .attr('height', d => height - y(d.value));
+            } else {
+                bars.attr('y', d => y(d.value))
+                    .attr('height', d => height - y(d.value));
+            }
+        }
+
+        // Scatter Plot Implementation
+        function createScatterPlot() {
+            const container = d3.select('#scatterPlot');
+            container.selectAll('*').remove();
+
+            const margin = {top: 20, right: 30, bottom: 40, left: 40};
+            const width = 460 - margin.left - margin.right;
+            const height = 280 - margin.top - margin.bottom;
+
+            const svg = container.append('svg')
+                .attr('width', width + margin.left + margin.right)
+                .attr('height', height + margin.top + margin.bottom);
+
+            const g = svg.append('g')
+                .attr('transform', `translate(${margin.left},${margin.top})`);
+
+            const x = d3.scaleLinear()
+                .domain([0, 100])
+                .range([0, width]);
+
+            const y = d3.scaleLinear()
+                .domain([0, 100])
+                .range([height, 0]);
+
+            g.append('g')
+                .attr('class', 'axis')
+                .attr('transform', `translate(0,${height})`)
+                .call(d3.axisBottom(x));
+
+            g.append('g')
+                .attr('class', 'axis')
+                .call(d3.axisLeft(y));
+
+            const dots = g.selectAll('.dot')
+                .data(currentData.scatterData)
+                .enter().append('circle')
+                .attr('class', 'dot')
+                .attr('cx', d => x(d.x))
+                .attr('cy', d => y(d.y))
+                .attr('r', 0)
+                .on('mouseover', function(event, d) {
+                    showTooltip(event, `X: ${d.x.toFixed(1)}, Y: ${d.y.toFixed(1)}`);
+                })
+                .on('mouseout', hideTooltip);
+
+            if (animationEnabled) {
+                dots.transition()
+                    .duration(1000)
+                    .delay((d, i) => i * 50)
+                    .attr('r', d => d.size);
+            } else {
+                dots.attr('r', d => d.size);
+            }
+        }
+
+        // Line Chart Implementation
+        function createLineChart() {
+            const container = d3.select('#lineChart');
+            container.selectAll('*').remove();
+
+            const margin = {top: 20, right: 30, bottom: 40, left: 40};
+            const width = 460 - margin.left - margin.right;
+            const height = 280 - margin.top - margin.bottom;
+
+            const svg = container.append('svg')
+                .attr('width', width + margin.left + margin.right)
+                .attr('height', height + margin.top + margin.bottom);
+
+            const g = svg.append('g')
+                .attr('transform', `translate(${margin.left},${margin.top})`);
+
+            const x = d3.scaleLinear()
+                .domain(d3.extent(currentData.lineData, d => d.x))
+                .range([0, width]);
+
+            const y = d3.scaleLinear()
+                .domain(d3.extent(currentData.lineData, d => d.y))
+                .range([height, 0]);
+
+            const line = d3.line()
+                .x(d => x(d.x))
+                .y(d => y(d.y))
+                .curve(d3.curveMonotoneX);
+
+            const area = d3.area()
+                .x(d => x(d.x))
+                .y0(height)
+                .y1(d => y(d.y))
+                .curve(d3.curveMonotoneX);
+
+            g.append('g')
+                .attr('class', 'axis')
+                .attr('transform', `translate(0,${height})`)
+                .call(d3.axisBottom(x));
+
+            g.append('g')
+                .attr('class', 'axis')
+                .call(d3.axisLeft(y));
+
+            // Add area
+            const areaPath = g.append('path')
+                .datum(currentData.lineData)
+                .attr('class', 'area')
+                .attr('d', area);
+
+            // Add line
+            const linePath = g.append('path')
+                .datum(currentData.lineData)
+                .attr('class', 'line')
+                .attr('d', line);
+
+            if (animationEnabled) {
+                const totalLength = linePath.node().getTotalLength();
+                linePath
+                    .attr('stroke-dasharray', totalLength + ' ' + totalLength)
+                    .attr('stroke-dashoffset', totalLength)
+                    .transition()
+                    .duration(2000)
+                    .attr('stroke-dashoffset', 0);
+            }
+
+            // Add dots
+            g.selectAll('.line-dot')
+                .data(currentData.lineData)
+                .enter().append('circle')
+                .attr('class', 'dot')
+                .attr('cx', d => x(d.x))
+                .attr('cy', d => y(d.y))
+                .attr('r', 3)
+                .on('mouseover', function(event, d) {
+                    showTooltip(event, `Point ${d.x}: ${d.y.toFixed(1)}`);
+                })
+                .on('mouseout', hideTooltip);
+        }
+
+        // Pie Chart Implementation
+        function createPieChart() {
+            const container = d3.select('#pieChart');
+            container.selectAll('*').remove();
+
+            const width = 460;
+            const height = 280;
+            const radius = Math.min(width, height) / 2 - 20;
+
+            const svg = container.append('svg')
+                .attr('width', width)
+                .attr('height', height);
+
+            const g = svg.append('g')
+                .attr('transform', `translate(${width/2},${height/2})`);
+
+            const color = d3.scaleOrdinal()
+                .domain(currentData.pieData.map(d => d.name))
+                .range(['#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#feca57']);
+
+            const pie = d3.pie()
+                .value(d => d.value)
+                .sort(null);
+
+            const arc = d3.arc()
+                .innerRadius(0)
+                .outerRadius(radius);
+
+            const arcHover = d3.arc()
+                .innerRadius(0)
+                .outerRadius(radius + 10);
+
+            const arcs = g.selectAll('.arc')
+                .data(pie(currentData.pieData))
+                .enter().append('g')
+                .attr('class', 'arc');
+
+            const paths = arcs.append('path')
+                .attr('fill', d => color(d.data.name))
+                .attr('stroke', '#fff')
+                .attr('stroke-width', 2)
+                .on('mouseover', function(event, d) {
+                    d3.select(this).transition().duration(200).attr('d', arcHover);
+                    showTooltip(event, `${d.data.name}: ${d.data.value.toFixed(1)}`);
+                })
+                .on('mouseout', function(event, d) {
+                    d3.select(this).transition().duration(200).attr('d', arc);
+                    hideTooltip();
+                });
+
+            if (animationEnabled) {
+                paths.transition()
+                    .duration(1000)
+                    .attrTween('d', function(d) {
+                        const interpolate = d3.interpolate({startAngle: 0, endAngle: 0}, d);
+                        return function(t) {
+                            return arc(interpolate(t));
+                        };
+                    });
+            } else {
+                paths.attr('d', arc);
+            }
+
+            // Add labels
+            arcs.append('text')
+                .attr('transform', d => `translate(${arc.centroid(d)})`)
+                .attr('dy', '0.35em')
+                .attr('text-anchor', 'middle')
+                .style('fill', '#fff')
+                .style('font-size', '12px')
+                .text(d => d.data.name);
+        }
+
+        // Force-Directed Graph Implementation
+        function createForceGraph() {
+            const container = d3.select('#forceGraph');
+            container.selectAll('*').remove();
+
+            const width = 460;
+            const height = 280;
+
+            const svg = container.append('svg')
+                .attr('width', width)
+                .attr('height', height);
+
+            const color = d3.scaleOrdinal(d3.schemeCategory10);
+
+            const simulation = d3.forceSimulation(currentData.networkData.nodes)
+                .force('link', d3.forceLink(currentData.networkData.links).id(d => d.id).distance(50))
+                .force('charge', d3.forceManyBody().strength(-200))
+                .force('center', d3.forceCenter(width / 2, height / 2));
+
+            const link = svg.append('g')
+                .attr('class', 'links')
+                .selectAll('line')
+                .data(currentData.networkData.links)
+                .enter().append('line')
+                .attr('class', 'link');
+
+            const node = svg.append('g')
+                .attr('class', 'nodes')
+                .selectAll('circle')
+                .data(currentData.networkData.nodes)
+                .enter().append('circle')
+                .attr('class', 'node')
+                .attr('r', 8)
+                .attr('fill', d => color(d.group))
+                .on('mouseover', function(event, d) {
+                    showTooltip(event, `Node ${d.id} (Group ${d.group})`);
+                })
+                .on('mouseout', hideTooltip)
+                .call(d3.drag()
+                    .on('start', dragstarted)
+                    .on('drag', dragged)
+                    .on('end', dragended));
+
+            simulation.on('tick', () => {
+                link
+                    .attr('x1', d => d.source.x)
+                    .attr('y1', d => d.source.y)
+                    .attr('x2', d => d.target.x)
+                    .attr('y2', d => d.target.y);
+
+                node
+                    .attr('cx', d => d.x)
+                    .attr('cy', d => d.y);
+            });
+
+            function dragstarted(event, d) {
+                if (!event.active) simulation.alphaTarget(0.3).restart();
+                d.fx = d.x;
+                d.fy = d.y;
+            }
+
+            function dragged(event, d) {
+                d.fx = event.x;
+                d.fy = event.y;
+            }
+
+            function dragended(event, d) {
+                if (!event.active) simulation.alphaTarget(0);
+                d.fx = null;
+                d.fy = null;
+            }
+        }
+
+        // Heatmap Implementation
+        function createHeatmap() {
+            const container = d3.select('#heatmap');
+            container.selectAll('*').remove();
+
+            const margin = {top: 20, right: 30, bottom: 40, left: 40};
+            const width = 460 - margin.left - margin.right;
+            const height = 280 - margin.top - margin.bottom;
+
+            const svg = container.append('svg')
+                .attr('width', width + margin.left + margin.right)
+                .attr('height', height + margin.top + margin.bottom);
+
+            const g = svg.append('g')
+                .attr('transform', `translate(${margin.left},${margin.top})`);
+
+            const gridSize = Math.min(width, height) / 10;
+
+            const colorScale = d3.scaleSequential()
+                .interpolator(d3.interpolateViridis)
+                .domain([0, 1]);
+
+            const cards = g.selectAll('.hour')
+                .data(currentData.heatmapData)
+                .enter().append('rect')
+                .attr('x', d => d.col * gridSize)
+                .attr('y', d => d.row * gridSize)
+                .attr('width', gridSize - 1)
+                .attr('height', gridSize - 1)
+                .style('fill', '#000')
+                .on('mouseover', function(event, d) {
+                    showTooltip(event, `Row ${d.row}, Col ${d.col}: ${d.value.toFixed(3)}`);
+                })
+                .on('mouseout', hideTooltip);
+
+            if (animationEnabled) {
+                cards.transition()
+                    .duration(1000)
+                    .delay((d, i) => i * 20)
+                    .style('fill', d => colorScale(d.value));
+            } else {
+                cards.style('fill', d => colorScale(d.value));
+            }
+
+            // Add row labels
+            const rowLabels = g.selectAll('.rowLabel')
+                .data([0,1,2,3,4,5,6,7,8,9])
+                .enter().append('text')
+                .text(d => `R${d}`)
+                .attr('x', -10)
+                .attr('y', d => d * gridSize + gridSize / 2)
+                .style('text-anchor', 'end')
+                .attr('transform', `translate(0, ${gridSize / 4})`)
+                .attr('class', 'axis')
+                .style('fill', '#fff')
+                .style('font-size', '10px');
+
+            // Add column labels
+            const colLabels = g.selectAll('.colLabel')
+                .data([0,1,2,3,4,5,6,7,8,9])
+                .enter().append('text')
+                .text(d => `C${d}`)
+                .attr('x', d => d * gridSize + gridSize / 2)
+                .attr('y', -5)
+                .style('text-anchor', 'middle')
+                .attr('class', 'axis')
+                .style('fill', '#fff')
+                .style('font-size', '10px');
+        }
+
+        // Auto-refresh data every 5 seconds for demo purposes
+        setInterval(() => {
+            if (animationEnabled) {
+                currentData = generateRandomData();
+                initializeAllVisualizations();
+            }
+        }, 5000);
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeAllVisualizations();
+        });
+    </script>
+</body>
+</html>
