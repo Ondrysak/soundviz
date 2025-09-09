@@ -176,6 +176,12 @@
                 <option value="fractalFlames">🔥 Fractal Flames</option>
                 <option value="cliffordAttractor">🌀 Clifford Attractor</option>
                 <option value="recursivePolygon">⬡ Recursive Polygons</option>
+                <option value="particleGalaxy3d">🌌 3D Particle Galaxy</option>
+                <option value="morphingGeometry3d">🔮 3D Morphing Geometry</option>
+                <option value="audioTerrain3d">🏔️ 3D Audio Terrain</option>
+                <option value="crystallineStructures3d">💎 3D Crystalline Structures</option>
+                <option value="neuralNetwork3d">🧠 3D Neural Network</option>
+                <option value="dnaHelix3d">🧬 3D DNA Helix</option>
             </select>
         </div>
     </div>
@@ -191,6 +197,9 @@
         <p>Make sure to allow microphone access when prompted by your browser.</p>
         <p>Try different visualization modes and make some noise to see the magic happen!</p>
     </div>
+
+    <!-- Load Three.js library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
     <!-- Load base classes first -->
     <script src="audio-visualizer.js"></script>
@@ -224,5 +233,13 @@
     <script src="visualizations/fractal-flames.js"></script>
     <script src="visualizations/clifford-attractor.js"></script>
     <script src="visualizations/recursive-polygon.js"></script>
+
+    <!-- New Three.js visualizations -->
+    <script src="visualizations/particle-galaxy-3d.js"></script>
+    <script src="visualizations/morphing-geometry-3d.js"></script>
+    <script src="visualizations/audio-terrain-3d.js"></script>
+    <script src="visualizations/crystalline-structures-3d.js"></script>
+    <script src="visualizations/neural-network-3d.js"></script>
+    <script src="visualizations/dna-helix-3d.js"></script>
 </body>
 </html>
