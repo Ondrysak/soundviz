@@ -36,6 +36,12 @@
   <script src="./feedback-post-visualization.js"></script>
   <script src="./torusknot-material-visualization.js"></script>
 
+  <script src="./instancing-scatter-visualization.js"></script>
+
+  <script src="./lensflares-visualization.js"></script>
+
+  <script src="./spotlights-visualization.js"></script>
+
 
 </head>
 <body>
@@ -58,6 +64,9 @@
             <option value="galaxy">Galaxy Particles</option>
             <option value="feedback">Feedback Post</option>
             <option value="torusknot">TorusKnot Material</option>
+            <option value="scatter">Instancing Scatter</option>
+            <option value="lensflares">Lens Flares</option>
+            <option value="spotlights">Spotlights</option>
           </select>
         </div>
       </div>
@@ -196,6 +205,9 @@
     else if (kind === 'galaxy') currentViz = new GalaxyParticlesVisualization(container);
     else if (kind === 'feedback') currentViz = new FeedbackPostVisualization(container);
     else if (kind === 'torusknot') currentViz = new TorusKnotMaterialVisualization(container);
+    else if (kind === 'scatter') currentViz = new InstancingScatterVisualization(container);
+    else if (kind === 'lensflares') currentViz = new LensFlaresVisualization(container);
+    else if (kind === 'spotlights') currentViz = new SpotlightsVisualization(container);
     else currentViz = new ParticleVisualization(container);
     if (AudioCtrl.analyser) currentViz.setAnalyser(AudioCtrl.ctx, AudioCtrl.analyser, AudioCtrl.fftSize);
     setupGUIForViz(kind);
@@ -253,6 +265,16 @@
       const p = currentViz.params || {};
       gui.add(p, 'textureSpeed', 0.2, 3.0, 0.05).name('Texture Speed').onChange(v=>currentViz.params.textureSpeed=v);
       gui.add(p, 'emissive', 0.0, 2.0, 0.01).name('Emissive').onChange(v=>currentViz.material.emissiveIntensity=v);
+    } else if (kind === 'scatter'){
+      const p = currentViz.params || {};
+      gui.add(p, 'rotate', 0.0, 2.0, 0.01).name('Rotate');
+    } else if (kind === 'lensflares'){
+      const p = currentViz.params || {};
+      gui.add(p, 'intensity', 0.2, 4.0, 0.05).name('Intensity').onChange(v=>{ currentViz.params.intensity = v; currentViz.light.intensity = v; });
+    } else if (kind === 'spotlights'){
+      const p = currentViz.params || {};
+      gui.add(p, 'angle', 0.1, 1.2, 0.01).name('Angle').onChange(v=> currentViz.params.angle = v);
+      gui.add(p, 'penumbra', 0.0, 1.0, 0.01).name('Penumbra').onChange(v=> currentViz.params.penumbra = v);
     }
   }
 
