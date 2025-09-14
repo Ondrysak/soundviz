@@ -33,21 +33,34 @@
       this.rtB = new THREE.WebGLRenderTarget(d.x, d.y, { depthBuffer:false, stencilBuffer:false });
       this.quadGeo = new THREE.PlaneBufferGeometry(2,2);
       this.uniforms = { time:{value:0}, resolution:{value:new THREE.Vector2(d.x, d.y)}, prevTex:{value:this.rtB.texture}, bassLevel:{value:0}, midLevel:{value:0}, trebleLevel:{value:0} };
-      this.quadMat = new THREE.ShaderMaterial({ vertexShader:quadVS, fragmentShader:quadFS, uniforms:this.uniforms, depthTest:false, depthWrite:false });
-      this.quad = new THREE.Mesh(this.quadGeo, this.quadMat);
-      // A separate scene/camera for full-screen quad
-      this.screenScene = new THREE.Scene(); this.screenCamera = new THREE.OrthographicCamera(-1,1,1,-1,0,1);
-      this.screenScene.add(this.quad);
+      // Feedback material (used only for offscreen ping-pong)
+      this.feedbackMat = new THREE.ShaderMaterial({ vertexShader:quadVS, fragmentShader:quadFS, uniforms:this.uniforms, depthTest:false, depthWrite:false });
+      // Display material (just shows latest rt texture)
+      this.displayUniforms = { prevTex:{value:this.rtB.texture}, resolution:{value:new THREE.Vector2(d.x,d.y)} };
+      this.displayMat = new THREE.ShaderMaterial({
+        vertexShader: 'void main(){ gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0); }',
+        fragmentShader: 'precision highp float; uniform sampler2D prevTex; uniform vec2 resolution; void main(){ vec2 uv = gl_FragCoord.xy / resolution; gl_FragColor = texture2D(prevTex, uv); }',
+        uniforms: this.displayUniforms, depthTest:false, depthWrite:false
+      });
+      this.quad = new THREE.Mesh(this.quadGeo, this.displayMat);
+      // Use an orthographic screen scene as the main scene so base renderer presents it
+      this.scene = new THREE.Scene(); this.camera = new THREE.OrthographicCamera(-1,1,1,-1,0,1);
+      this.scene.add(this.quad);
     }
-    onResize(){ const d=this.renderer.getDrawingBufferSize(new THREE.Vector2()); this.rtA.setSize(d.x,d.y); this.rtB.setSize(d.x,d.y); this.uniforms.resolution.value.set(d.x,d.y); }
+    onResize(){ const d=this.renderer.getDrawingBufferSize(new THREE.Vector2()); this.rtA.setSize(d.x,d.y); this.rtB.setSize(d.x,d.y); this.uniforms.resolution.value.set(d.x,d.y); this.displayUniforms.resolution.value.set(d.x,d.y); }
     update(audio){
       const t = audio.time||0; this.uniforms.time.value=t; this.uniforms.bassLevel.value=audio.bass||0; this.uniforms.midLevel.value=audio.mid||0; this.uniforms.trebleLevel.value=audio.treble||0;
-      // render pass: draw last frame with feedback into rtA, then present to screen
+      // Offscreen feedback step: sample previous rtB into rtA using feedback shader
       this.uniforms.prevTex.value = this.rtB.texture;
-      this.renderer.setRenderTarget(this.rtA); this.renderer.render(this.screenScene, this.screenCamera);
-      this.renderer.setRenderTarget(null); this.renderer.render(this.screenScene, this.screenCamera);
-      // ping-pong
+      this.quad.material = this.feedbackMat;
+      this.renderer.setRenderTarget(this.rtA);
+      this.renderer.render(this.scene, this.camera);
+      this.renderer.setRenderTarget(null);
+      // Ping-pong so rtB holds the newest frame
       const tmp = this.rtA; this.rtA = this.rtB; this.rtB = tmp;
+      // Final display: set quad to show latest rtB; base class will render the scene
+      this.displayUniforms.prevTex.value = this.rtB.texture;
+      this.quad.material = this.displayMat;
     }
     dispose(){ super.dispose(); this.rtA?.dispose?.(); this.rtB?.dispose?.(); this.quadGeo?.dispose?.(); this.quadMat?.dispose?.(); }
   }
