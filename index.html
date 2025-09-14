@@ -137,17 +137,52 @@
             background: #f44336;
             color: #fff;
         }
+
+        /* Styles for control panels */
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            height: 4px;
+            background: #333;
+            outline: none;
+            border-radius: 2px;
+            margin: 5px 0;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            background: linear-gradient(45deg, #4ecdc4, #45b7d1);
+            cursor: pointer;
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            background: linear-gradient(45deg, #4ecdc4, #45b7d1);
+            cursor: pointer;
+            border-radius: 50%;
+            border: none;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
     </style>
 </head>
 <body>
     <div class="header">
         <h1>🎵 Sound Visualizer 🎵</h1>
     </div>
+    <div style="margin-top: -10px; margin-bottom: 10px; text-align:center;">
+        <a href="threejs-visualizations/index.html" style="color:#4ecdc4; text-decoration:none; font-weight:bold;">▶ Open Three.js Visualizations Showcase</a>
+    </div>
 
     <div class="controls">
         <button id="startBtn">Start Visualization</button>
         <button id="stopBtn" disabled>Stop</button>
-        
+
         <div class="mode-selector">
             <label for="visualMode">Mode:</label>
             <select id="visualMode">
@@ -174,7 +209,7 @@
                 <option value="sierpinskiTriangle">🔺 Sierpinski Triangle</option>
                 <option value="sierpinskiCarpet">🟫 Sierpinski Carpet</option>
                 <option value="fractalFlames">🔥 Fractal Flames</option>
-                <option value="cliffordAttractor">🌀 Clifford Attractor</option>
+                <option value="cliffordAttractor">🌀 Multi-Clifford Attractors</option>
                 <option value="recursivePolygon">⬡ Recursive Polygons</option>
             </select>
         </div>

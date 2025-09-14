@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Three.js Audio Visualizations</title>
+  <style>
+    html, body { margin:0; height:100%; background:#000; color:#fff; font-family: Arial, sans-serif; }
+    #app { display:flex; height:100%; }
+    #sidebar { width: 320px; background:#0b0b0b; border-right:1px solid #222; padding:12px; box-sizing:border-box; overflow:auto; }
+    #viewport { flex:1; position:relative; }
+    #viewport canvas { display:block; width:100%; height:100%; }
+    .section { margin-bottom:12px; }
+    .row { display:flex; gap:8px; align-items:center; flex-wrap: wrap; }
+    select, button, input[type="file"] { background:#111; color:#eee; border:1px solid #333; padding:6px; border-radius:4px; }
+    .metrics { font-size:12px; color:#ccc; }
+    .levels { display:flex; gap:4px; }
+    .bar { width: 80px; height: 8px; background:#222; position:relative; }
+    .bar > span { position:absolute; left:0; top:0; bottom:0; background:linear-gradient(90deg, #0ff, #f0f); width:0; }
+    .footer { position:absolute; right:10px; bottom:10px; font-size:12px; color:#aaa; }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dat.gui@0.7.7/build/dat.gui.min.js"></script>
+  <script src="./base-threejs-visualization.js"></script>
+  <script src="./fractal-visualization.js"></script>
+  <script src="./shader-visualization.js"></script>
+  <script src="./particle-visualization.js"></script>
+  <script src="./particle-rings-visualization.js"></script>
+  <script src="./deform-geometry-visualization.js"></script>
+  <script src="./plasma-shader-visualization.js"></script>
+  <script src="./audio-bars3d-visualization.js"></script>
+  <script src="./vertex-distortion-visualization.js"></script>
+  <script src="./instanced-grid-visualization.js"></script>
+  <script src="./ribbon-trails-visualization.js"></script>
+  <script src="./galaxy-particles-visualization.js"></script>
+  <script src="./feedback-post-visualization.js"></script>
+  <script src="./torusknot-material-visualization.js"></script>
+
+
+</head>
+<body>
+  <div id="app">
+    <div id="sidebar">
+      <div class="section">
+        <div class="row">
+          <label for="vizSelect">Visualization:</label>
+          <select id="vizSelect">
+            <option value="fractal">Fractal</option>
+            <option value="shader">Shader</option>
+            <option value="particles">Particles</option>
+            <option value="rings">Particle Rings</option>
+            <option value="deform">Deforming Geometry</option>
+            <option value="plasma">Plasma Shader</option>
+            <option value="bars3d">3D Audio Bars</option>
+            <option value="vertex">Vertex Distortion</option>
+            <option value="grid">Instanced Grid</option>
+            <option value="ribbons">Ribbon Trails</option>
+            <option value="galaxy">Galaxy Particles</option>
+            <option value="feedback">Feedback Post</option>
+            <option value="torusknot">TorusKnot Material</option>
+          </select>
+        </div>
+      </div>
+      <div class="section">
+        <div>Audio Input</div>
+        <div class="row">
+          <button id="micBtn">Use Microphone</button>
+          <input type="file" id="fileInput" accept="audio/*" />
+        </div>
+        <audio id="audioEl" controls style="width:100%; margin-top:6px;"></audio>
+      </div>
+      <div class="section">
+        <div>Performance</div>
+        <div class="metrics"><span id="fps">FPS: --</span> · <span id="count">Count: --</span></div>
+        <div class="levels" style="margin-top:6px;">
+          <div>Bass</div><div class="bar"><span id="bassBar"></span></div>
+          <div>Mid</div><div class="bar"><span id="midBar"></span></div>
+          <div>Treble</div><div class="bar"><span id="trebleBar"></span></div>
+        </div>
+        <div class="row" style="margin-top:6px;">
+          <button id="fullscreenBtn">Fullscreen</button>
+        </div>
+      </div>
+      <div id="guiContainer" class="section"></div>
+      <div class="section" style="font-size:12px; color:#aaa;">
+        Tips: Select an audio source (mic or file) and visualizations will react immediately. Switch visualizations anytime.
+      </div>
+    </div>
+    <div id="viewport"></div>
+  </div>
+
+  <div class="footer">Three.js Audio Visualizations</div>
+
+<script>
+  // Audio controller
+  const AudioCtrl = {
+    ctx: null,
+    analyser: null,
+    source: null,
+    smoothing: 0.8,
+    fftSize: 2048,
+    async useMic() {
+      if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      this._connectSource(this.ctx.createMediaStreamSource(stream));
+    },
+    async useFile(audioEl) {
+      if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+      if (this.source) this.source.disconnect();
+      this.source = this.ctx.createMediaElementSource(audioEl);
+      this._setupAnalyser();
+      this.source.connect(this.analyser);
+      this.analyser.connect(this.ctx.destination);
+    },
+    _setupAnalyser() {
+      if (!this.analyser) this.analyser = this.ctx.createAnalyser();
+      this.analyser.fftSize = this.fftSize;
+      this.analyser.smoothingTimeConstant = this.smoothing;
+    },
+    _connectSource(src) {
+      if (!this.ctx) return;
+      if (this.source) this.source.disconnect();
+      this.source = src;
+      this._setupAnalyser();
+      this.source.connect(this.analyser);
+      // Do not connect analyser to destination for mic to avoid feedback
+    }
+  };
+  // File-protocol friendly adjustments
+  if (!window.isSecureContext) {
+    const micBtnEl = document.getElementById('micBtn');
+    if (micBtnEl) {
+      micBtnEl.disabled = true;
+      micBtnEl.title = 'Microphone requires HTTPS or localhost. Use Audio File.';
+    }
+  }
+
+  // Ensure only one MediaElementSource per <audio> element (prevents errors on reselect)
+  AudioCtrl.mediaElementNode = null;
+  AudioCtrl.useFile = async function(audioEl) {
+    if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+    if (!this.analyser) this.analyser = this.ctx.createAnalyser();
+    this.analyser.fftSize = this.fftSize;
+    this.analyser.smoothingTimeConstant = this.smoothing;
+
+    if (!this.mediaElementNode) {
+      this.mediaElementNode = this.ctx.createMediaElementSource(audioEl);
+    }
+    try { this.mediaElementNode.disconnect(); } catch (e) {}
+    this.mediaElementNode.connect(this.analyser);
+    try { this.analyser.disconnect(); } catch (e) {}
+    this.analyser.connect(this.ctx.destination);
+  };
+
+
+  // Visualization management
+  const viewport = document.getElementById('viewport');
+  const vizSelect = document.getElementById('vizSelect');
+  const micBtn = document.getElementById('micBtn');
+  const fileInput = document.getElementById('fileInput');
+  const audioEl = document.getElementById('audioEl');
+  const fpsEl = document.getElementById('fps');
+  const countEl = document.getElementById('count');
+  const bassBar = document.getElementById('bassBar');
+  const midBar = document.getElementById('midBar');
+  const trebleBar = document.getElementById('trebleBar');
+  const fullscreenBtn = document.getElementById('fullscreenBtn');
+
+  let gui, currentViz = null;
+  let fpsFrames = 0, fpsLast = performance.now();
+
+  function makeContainer(){
+    // ensure viewport has a child
+    if (!viewport.firstChild){
+      const div = document.createElement('div');
+      div.style.position = 'absolute';
+      div.style.inset = '0';
+      viewport.appendChild(div);
+    }
+    return viewport.firstChild;
+  }
+
+  function createViz(kind){
+    if (currentViz) { currentViz.dispose(); currentViz = null; }
+    const container = makeContainer();
+    if (kind === 'fractal') currentViz = new FractalVisualization(container);
+    else if (kind === 'shader') currentViz = new ShaderVisualization(container);
+    else if (kind === 'particles') currentViz = new ParticleVisualization(container);
+    else if (kind === 'rings') currentViz = new ParticleRingsVisualization(container);
+    else if (kind === 'deform') currentViz = new DeformGeometryVisualization(container);
+    else if (kind === 'plasma') currentViz = new PlasmaShaderVisualization(container);
+    else if (kind === 'bars3d') currentViz = new AudioBars3DVisualization(container);
+    else if (kind === 'vertex') currentViz = new VertexDistortionVisualization(container);
+    else if (kind === 'grid') currentViz = new InstancedGridVisualization(container);
+    else if (kind === 'ribbons') currentViz = new RibbonTrailsVisualization(container);
+    else if (kind === 'galaxy') currentViz = new GalaxyParticlesVisualization(container);
+    else if (kind === 'feedback') currentViz = new FeedbackPostVisualization(container);
+    else if (kind === 'torusknot') currentViz = new TorusKnotMaterialVisualization(container);
+    else currentViz = new ParticleVisualization(container);
+    if (AudioCtrl.analyser) currentViz.setAnalyser(AudioCtrl.ctx, AudioCtrl.analyser, AudioCtrl.fftSize);
+    setupGUIForViz(kind);
+    currentViz.start();
+  }
+
+  function setupGUIForViz(kind){
+    // destroy previous gui
+    if (gui) { gui.destroy(); gui = null; }
+    gui = new dat.GUI({ autoPlace:false, width:300 });
+    document.getElementById('guiContainer').innerHTML = '';
+    document.getElementById('guiContainer').appendChild(gui.domElement);
+
+    if (kind === 'fractal'){
+      const p = currentViz.params;
+      gui.add(p, 'maxDepth', 1, 8, 1).name('Max Depth');
+      gui.add(p, 'hueSpeed', 0.0, 1.0, 0.01).name('Hue Speed');
+      gui.add(p, 'rotationSpeed', 0.0, 2.0, 0.01).name('Rotation Speed');
+      gui.add(p, 'scalePulse', 0.0, 0.5, 0.01).name('Scale Pulse');
+    } else if (kind === 'shader'){
+      // No parameters yet
+    } else if (kind === 'particles'){
+      const p = currentViz.params;
+      gui.add(p, 'pattern', ['sphere','cube','cloud']).name('Pattern').onChange(()=>currentViz._rebuild(currentViz.count));
+      gui.add(p, 'count', 500, 10000, 100).name('Count').onChange(v=>currentViz._rebuild(v));
+      gui.add(p, 'amplitude', 0.1, 3.0, 0.1).name('Amplitude');
+      gui.add(p, 'orbitSpeed', 0.0, 2.0, 0.01).name('Orbit Speed');
+      gui.add(p, 'avoidance', 0.0, 2.0, 0.01).name('Avoidance');
+    } else if (kind === 'rings'){
+      const p = currentViz.params || {};
+      gui.add(p, 'spin', 0.0, 2.0, 0.01).name('Spin');
+      gui.add(p, 'waveHeight', 0.0, 2.0, 0.01).name('Wave Height');
+      gui.add(p, 'spacing', 0.2, 1.2, 0.01).name('Ring Spacing');
+    } else if (kind === 'deform'){
+      const p = currentViz.params || {};
+      gui.add(p, 'amplitude', 0.0, 1.5, 0.01).name('Amplitude');
+    } else if (kind === 'plasma'){
+      // No parameters yet
+    } else if (kind === 'bars3d'){
+      // No adjustable params without rebuild; could add read-only display
+    } else if (kind === 'vertex'){
+      // No parameters yet
+    } else if (kind === 'grid'){
+      const p = currentViz.params || {};
+      gui.add(p, 'rotate', 0.0, 2.0, 0.01).name('Rotate');
+    } else if (kind === 'ribbons'){
+      const p = currentViz.params || {};
+      gui.add(p, 'speed', 0.2, 2.5, 0.01).name('Speed');
+      gui.add(p, 'spread', 0.5, 4.0, 0.01).name('Spread');
+    } else if (kind === 'galaxy'){
+      // No parameters yet (count requires rebuild)
+    } else if (kind === 'feedback'){
+      // No parameters yet
+    } else if (kind === 'torusknot'){
+      const p = currentViz.params || {};
+      gui.add(p, 'textureSpeed', 0.2, 3.0, 0.05).name('Texture Speed').onChange(v=>currentViz.params.textureSpeed=v);
+      gui.add(p, 'emissive', 0.0, 2.0, 0.01).name('Emissive').onChange(v=>currentViz.material.emissiveIntensity=v);
+    }
+  }
+
+  function updateMetrics(){
+    // FPS
+    fpsFrames++;
+    const now = performance.now();
+    if (now - fpsLast > 1000){
+      const fps = Math.round((fpsFrames * 1000) / (now - fpsLast));
+      fpsEl.textContent = 'FPS: ' + fps;
+      fpsFrames = 0; fpsLast = now;
+    }
+
+    // Audio levels
+    if (currentViz && currentViz.analyser && currentViz.frequencyData){
+      currentViz.analyser.getByteFrequencyData(currentViz.frequencyData);
+      const b = currentViz._computeBands(currentViz.frequencyData, currentViz.fftSize, currentViz.sampleRate);
+      bassBar.style.width = Math.round(b.bass * 100) + '%';
+      midBar.style.width = Math.round(b.mid * 100) + '%';
+      trebleBar.style.width = Math.round(b.treble * 100) + '%';
+    }
+
+    // Stats
+    if (currentViz && typeof currentViz.getStats === 'function'){
+      const s = currentViz.getStats();
+      countEl.textContent = 'Count: ' + (s.particles ?? '--');
+    }
+    requestAnimationFrame(updateMetrics);
+  }
+
+  // UI wiring
+  vizSelect.addEventListener('change', e => { createViz(e.target.value); });
+  micBtn.addEventListener('click', async ()=>{
+    await AudioCtrl.useMic();
+    if (!currentViz) createViz(vizSelect.value);
+    if (AudioCtrl.ctx && AudioCtrl.ctx.state === 'suspended') await AudioCtrl.ctx.resume();
+    currentViz.setAnalyser(AudioCtrl.ctx, AudioCtrl.analyser, AudioCtrl.fftSize);
+    currentViz.start();
+  });
+  fileInput.addEventListener('change', async (e)=>{
+    const file = e.target.files[0]; if (!file) return;
+    const url = URL.createObjectURL(file);
+    audioEl.src = url; audioEl.loop = true;
+    await audioEl.play().catch(()=>{});
+    await AudioCtrl.useFile(audioEl);
+    if (!currentViz) createViz(vizSelect.value);
+    if (AudioCtrl.ctx && AudioCtrl.ctx.state === 'suspended') await AudioCtrl.ctx.resume();
+    currentViz.setAnalyser(AudioCtrl.ctx, AudioCtrl.analyser, AudioCtrl.fftSize);
+    currentViz.start();
+  });
+  fullscreenBtn.addEventListener('click', ()=>{
+    if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+    else document.exitFullscreen();
+  });
+
+  // Boot
+  createViz(vizSelect.value);
+  updateMetrics();
+</script>
+</body>
+</html>
+
