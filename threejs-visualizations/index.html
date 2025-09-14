@@ -271,6 +271,27 @@
       gui.add(p, 'hueTimeSpeed', 0.0, 0.2, 0.005).name('Hue Speed');
       gui.add(p, 'gamma', 0.5, 2.0, 0.01).name('Gamma');
       gui.add(p, 'satBase', 0.0, 1.0, 0.01).name('Saturation Base');
+      gui.add(p, 'patternMode', { Kaleidoscope:0, GridMirror:1, Voronoi:2, Hex:3, Triangles:4, SpiralGrid:5, Concentric:6 }).name('Pattern');
+      gui.add(p, 'gridScale', 1.0, 24.0, 0.1).name('Grid Scale');
+      gui.add(p, 'patternRotate', 0.0, Math.PI*2, 0.01).name('Pattern Rotate');
+      gui.add(p, 'patternOffsetX', -2.0, 2.0, 0.01).name('Pattern Offset X');
+      gui.add(p, 'patternOffsetY', -2.0, 2.0, 0.01).name('Pattern Offset Y');
+      gui.add(p, 'patternMorph', 0.0, 1.0, 0.01).name('Pattern Morph');
+
+      gui.add(p, 'paletteMode', { Continuous:0, Quantized:1, Triadic:2, Complementary:3, Analogous:4, SplitComplementary:5, Tetradic:6, Monochrome:7 }).name('Palette');
+      gui.add(p, 'hueSteps', 2.0, 24.0, 1.0).name('Hue Steps');
+      gui.add(p, 'paletteIntensity', 0.3, 2.0, 0.01).name('Palette Intensity');
+      gui.add(p, 'colorTemp', -0.5, 0.5, 0.01).name('Color Temp');
+
+      gui.add(p, 'edgeStrength', 0.0, 1.0, 0.01).name('Edge Strength');
+      gui.add(p, 'sharpen', 0.0, 1.0, 0.01).name('Sharpen');
+      gui.add(p, 'contrast', 0.0, 1.5, 0.01).name('Contrast');
+      gui.add(p, 'voronoiStrength', 0.0, 0.3, 0.001).name('Voronoi Warp');
+      gui.add(p, 'rectWaveAmp', 0.0, 0.05, 0.001).name('Rect Wave Amp');
+      gui.add(p, 'rectWaveFreq', 1.0, 30.0, 0.5).name('Rect Wave Freq');
+      gui.add(p, 'zigzagAmp', 0.0, 0.05, 0.001).name('Zigzag Amp');
+      gui.add(p, 'noiseWarpStrength', 0.0, 0.05, 0.001).name('Noise Warp');
+
       gui.add(p, 'brightness', 0.3, 1.5, 0.01).name('Brightness');
       gui.add(p, 'toneStrength', 0.0, 1.0, 0.01).name('Tone Map');
       gui.add(p, 'bassFloor', 0.0, 0.5, 0.01).name('Bass Floor');
@@ -280,6 +301,7 @@
       const rng = { randomize(){
         const p = currentViz.params || {};
         const rr = (min,max)=>min + Math.random()*(max-min);
+        const ri = (min,max)=>Math.floor(min + Math.random()*(max-min+1));
         p.decay = rr(0.965, 0.992);
         p.decayBass = rr(0.0, 0.05);
         p.addBase = rr(0.00, 0.12);
@@ -302,6 +324,26 @@
         p.bassFloor = rr(0.05, 0.25);
         p.midFloor = rr(0.05, 0.25);
         p.trebleFloor = rr(0.05, 0.25);
+        // New pattern/palette randomization
+        p.patternMode = ri(0, 6);
+        p.gridScale = rr(2.0, 18.0);
+        p.patternRotate = rr(0.0, Math.PI*2);
+        p.patternOffsetX = rr(-0.8, 0.8);
+        p.patternOffsetY = rr(-0.8, 0.8);
+        p.patternMorph = rr(0.0, 1.0);
+        p.paletteMode = ri(0, 7);
+        p.hueSteps = ri(3, 16);
+        p.paletteIntensity = rr(0.6, 1.6);
+        p.colorTemp = rr(-0.3, 0.3);
+        // Structure and warp extras
+        p.edgeStrength = rr(0.0, 0.6);
+        p.sharpen = rr(0.0, 0.6);
+        p.contrast = rr(0.0, 0.6);
+        p.voronoiStrength = rr(0.0, 0.2);
+        p.rectWaveAmp = rr(0.0, 0.03);
+        p.rectWaveFreq = rr(4.0, 22.0);
+        p.zigzagAmp = rr(0.0, 0.02);
+        p.noiseWarpStrength = rr(0.0, 0.02);
         if (gui && gui.__controllers) gui.__controllers.forEach(c=>c.updateDisplay&&c.updateDisplay());
       }};
       gui.add(rng, 'randomize').name('Randomize Params');
