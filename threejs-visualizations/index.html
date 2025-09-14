@@ -62,7 +62,7 @@
             <option value="grid">Instanced Grid</option>
             <option value="ribbons">Ribbon Trails</option>
             <option value="galaxy">Galaxy Particles</option>
-            <option value="feedback">Feedback Post</option>
+            <option value="feedback" selected>Feedback Post</option>
             <option value="torusknot">TorusKnot Material</option>
             <option value="scatter">Instancing Scatter</option>
             <option value="lensflares">Lens Flares</option>
@@ -260,7 +260,52 @@
     } else if (kind === 'galaxy'){
       // No parameters yet (count requires rebuild)
     } else if (kind === 'feedback'){
-      // No parameters yet
+      const p = currentViz.params || {};
+      gui.add(p, 'decay', 0.90, 0.999, 0.0005).name('Decay');
+      gui.add(p, 'addBase', 0.0, 0.5, 0.005).name('Add Base');
+      gui.add(p, 'mulBase', 0.0, 0.5, 0.005).name('Mul Base');
+      gui.add(p, 'segBase', 1.0, 16.0, 1.0).name('Segments Base');
+      gui.add(p, 'segRange', 0.0, 24.0, 1.0).name('Segments Range');
+      gui.add(p, 'spiralMax', 0.0, 3.0, 0.01).name('Spiral Max');
+      gui.add(p, 'noiseTreble', 0.0, 0.05, 0.001).name('Noise Treble');
+      gui.add(p, 'hueTimeSpeed', 0.0, 0.2, 0.005).name('Hue Speed');
+      gui.add(p, 'gamma', 0.5, 2.0, 0.01).name('Gamma');
+      gui.add(p, 'satBase', 0.0, 1.0, 0.01).name('Saturation Base');
+      gui.add(p, 'brightness', 0.3, 1.5, 0.01).name('Brightness');
+      gui.add(p, 'toneStrength', 0.0, 1.0, 0.01).name('Tone Map');
+      gui.add(p, 'bassFloor', 0.0, 0.5, 0.01).name('Bass Floor');
+      gui.add(p, 'midFloor', 0.0, 0.5, 0.01).name('Mid Floor');
+      gui.add(p, 'trebleFloor', 0.0, 0.5, 0.01).name('Treble Floor');
+
+      const rng = { randomize(){
+        const p = currentViz.params || {};
+        const rr = (min,max)=>min + Math.random()*(max-min);
+        p.decay = rr(0.965, 0.992);
+        p.decayBass = rr(0.0, 0.05);
+        p.addBase = rr(0.00, 0.12);
+        p.addTreble = rr(0.05, 0.50);
+        p.mulBase = rr(0.00, 0.15);
+        p.mulMid = rr(0.05, 0.35);
+        p.segBase = Math.round(rr(3.0, 12.0));
+        p.segRange = Math.round(rr(4.0, 20.0));
+        p.spiralMin = rr(0.0, 0.2);
+        p.spiralMax = rr(0.3, 2.0);
+        p.noiseBase = rr(0.000, 0.006);
+        p.noiseTreble = rr(0.003, 0.035);
+        p.hueTimeSpeed = rr(0.0, 0.08);
+        p.satBase = rr(0.10, 0.70);
+        p.satMid = rr(0.05, 0.60);
+        p.satTreble = rr(0.05, 0.60);
+        p.gamma = rr(0.8, 1.4);
+        p.brightness = rr(0.6, 1.2);
+        p.toneStrength = rr(0.5, 1.0);
+        p.bassFloor = rr(0.05, 0.25);
+        p.midFloor = rr(0.05, 0.25);
+        p.trebleFloor = rr(0.05, 0.25);
+        if (gui && gui.__controllers) gui.__controllers.forEach(c=>c.updateDisplay&&c.updateDisplay());
+      }};
+      gui.add(rng, 'randomize').name('Randomize Params');
+
     } else if (kind === 'torusknot'){
       const p = currentViz.params || {};
       gui.add(p, 'textureSpeed', 0.2, 3.0, 0.05).name('Texture Speed').onChange(v=>currentViz.params.textureSpeed=v);
@@ -331,6 +376,7 @@
   });
 
   // Boot
+  vizSelect.value = 'feedback';
   createViz(vizSelect.value);
   updateMetrics();
 </script>
