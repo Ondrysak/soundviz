@@ -15,7 +15,7 @@
     uniform float uToneStrength; uniform float uBrightness;
     uniform float uBassFloor; uniform float uMidFloor; uniform float uTrebleFloor;
     // New controls
-    uniform float uPatternMode; // 0=kalei,1=gridMirror,2=voronoi,3=hex,4=tri,5=spiralGrid,6=concentric,7=radialSpokes
+    uniform float uPatternMode; // 0=kalei,1=gridMirror,2=voronoi,3=hex,4=tri,5=spiralGrid,6=concentric,7=radialSpokes,8=drosteTunnel,9=petals
     uniform float uGridScale;
     uniform float uPatternRotate; uniform vec2 uPatternOffset; uniform float uPatternMorph;
     uniform float uPaletteMode; // 0=continuous,1=quantized,2=triadic,3=complementary,4=analogous,5=splitComp,6=tetradic,7=monochrome
@@ -110,6 +110,29 @@
       return vec2(cos(a2), sin(a2)) * r;
     }
 
+    // Log-polar Droste with periodic wrap and twist (distinct tunnel look)
+    vec2 drosteMap(vec2 p, float zoom, float rot){
+      // Log-polar coords
+      float r = max(length(p), 1e-4);
+      float a = atan(p.y, p.x);
+      float s = log(r);
+      // Periodic wrap to create recursive rings
+      float period = 1.15;                       // ring spacing in log-space
+      float sw = mod(s + zoom + time*0.12, period) - period*0.5;
+      // Add a gentle swirl proportional to depth to avoid spoke-like symmetry
+      float twist = rot + sw*2.2 + 0.22*sin(3.0*a + time*0.4);
+      a += twist;
+      float rp = exp(sw);
+      return vec2(cos(a), sin(a)) * rp;
+    }
+
+    // Rose/petal polar modulation (k petals)
+    vec2 rosePetalMap(vec2 p, float k, float amp, float flutter){
+      float r = length(p); float a = atan(p.y,p.x);
+      float modr = 1.0 + amp * (cos(k*a) + sin(k*1.3*a + time*6.0)*flutter);
+      return vec2(cos(a), sin(a)) * (r*modr);
+    }
+
 
     vec3 samplePrev(vec2 uv){ return texture2D(prevTex, clamp(uv, 0.0, 1.0)).rgb; }
 
@@ -140,10 +163,19 @@
         q = spiralGrid(pp, max(1.0, seg), m);
       } else if (uPatternMode < 6.5){
         q = concentric(pp, max(1.0, seg));
-      } else {
+      } else if (uPatternMode < 7.5){
         float spokes = max(4.0, seg);
         float width  = clamp(0.25 - 0.12*m, 0.05, 0.4);
         q = radialSpokes(pp, spokes, width);
+      } else if (uPatternMode < 8.5){
+        float zoomEff = 0.015 * (0.6 + b*1.0);
+        float rotEff  = 0.25 * (0.5 + t*1.0);
+        q = drosteMap(pp, zoomEff, rotEff);
+      } else {
+        float k = max(3.0, floor(seg*0.5));
+        float amp = 0.10 + b*0.12;
+        float fl  = 0.02 + t*0.05;
+        q = rosePetalMap(pp, k, amp, fl);
       }
 
       // Spiral/radial warp + non-radial distortions
