@@ -6,6 +6,17 @@
     uniform float uLineThickness;
     uniform float uLineCount;
     uniform float uLineSpacing;
+    uniform float uSpacingMode; // 0=Linear,1=Exponential,2=Sinusoidal,3=Logarithmic
+    uniform float uExpBase;
+    uniform float uSinFreq;
+    uniform float uSinAmp;
+    uniform float uLogBase;
+    uniform float uLineOffset;   // global offset (px)
+    uniform float uLineJitterAmp; // per-line jitter (px)
+    uniform float uLineJitterSpeed; // jitter speed
+    uniform float uLineSoftness; // smoothing multiplier (1.0 = default)
+    uniform float uLineBrightness; // multiplies line mask in mix
+    uniform float uLineSide; // 0=Both,1=Inside,2=Outside
 
     // Shadertoy-style helpers adapted to WebGL1
     float patternFrac(float x){ return fract(1.5*x); }
@@ -89,10 +100,43 @@
       float wline = max(0.001, uLineThickness);
       for (int i=0; i<10; i++) {
         if (float(i) >= count) break;
-        float target = float(i) * max(0.0001, uLineSpacing);
+        float idx = float(i);
+        float target;
+        if (abs(uSpacingMode - 0.0) < 0.5) {
+          // Linear
+          target = idx * max(0.0001, uLineSpacing);
+        } else if (abs(uSpacingMode - 1.0) < 0.5) {
+          // Exponential cumulative spacing
+          float base = max(1.01, uExpBase);
+          target = max(0.0, (pow(base, idx) - 1.0) / (base - 1.0)) * uLineSpacing;
+        } else if (abs(uSpacingMode - 2.0) < 0.5) {
+          // Sinusoidal offset on top of linear
+          float freq = max(0.01, uSinFreq);
+          float amp = uSinAmp;
+          target = idx * uLineSpacing + amp * sin(idx * freq) * uLineSpacing;
+          target = max(0.0, target);
+        } else {
+          // Logarithmic (decreasing gaps outward)
+          float lb = max(1.01, uLogBase);
+          float denom = log(1.0 + (count - 1.0) * lb);
+          float norm = (denom > 0.0) ? log(1.0 + idx * lb) / denom : 0.0;
+          target = norm * uLineSpacing * (count - 1.0);
+        }
+        // Global offset and per-line jitter
+        target += uLineOffset;
+        target += uLineJitterAmp * sin(idx * 2.399 + time * uLineJitterSpeed);
+        target = max(0.0, target);
         float ad = abs(d - target);
-        // Soft band for each ring
-        float ring = 1.0 - smoothstep(wline, wline + 0.5*wline, ad);
+        // Side mask: 0=both, 1=inside (f>=0), 2=outside (f<=0)
+        float insideMask = step(0.0, f);
+        float outsideMask = step(f, 0.0);
+        float allow = 1.0;
+        if (abs(uLineSide - 1.0) < 0.5) allow = insideMask;
+        else if (abs(uLineSide - 2.0) < 0.5) allow = outsideMask;
+        // Soft band for each ring with adjustable softness
+        float t1 = wline;
+        float t2 = wline * (1.0 + 0.5 * max(0.1, uLineSoftness));
+        float ring = (1.0 - smoothstep(t1, t2, ad)) * allow;
         lines = max(lines, ring);
       }
 
@@ -114,7 +158,7 @@
       col *= 0.85 + 0.35*(0.5 + 0.5*sin(t*0.15 + 5.0*treb + length(p)*2.0));
 
       // Apply multi-line contour overlay (brighten along lines)
-      col = mix(col, vec3(1.0), clamp(lines, 0.0, 1.0));
+      col = mix(col, vec3(1.0), clamp(lines * uLineBrightness, 0.0, 1.0));
 
       gl_FragColor = vec4(col, 1.0);
     }
@@ -122,13 +166,21 @@
 
   class NoteShapeShaderVisualization extends ThreeJSVisualization {
     initialize(){
-      this.params = { twist: 0.6, zoom: 1.0, lineThickness: 3.0, lineCount: 6, lineSpacing: 8.0 };
+      this.params = { twist: 0.6, zoom: 1.0, lineThickness: 3.0, lineCount: 6, lineSpacing: 8.0,
+        spacingMode: 'Linear', exponentialBase: 1.6, sinusoidFreq: 1.0, sinusoidAmp: 0.6, logBase: 3.0,
+        lineBrightness: 1.0, lineSoftness: 1.0, lineOffset: 0.0, lineSide: 'Both', lineJitterAmp: 0.0, lineJitterSpeed: 0.8 };
       this.geometry = new THREE.PlaneBufferGeometry(50,50,1,1);
       this.uniforms = {
         time:{value:0}, resolution:{value:new THREE.Vector2(1,1)},
         bassLevel:{value:0}, midLevel:{value:0}, trebleLevel:{value:0},
         uLineThickness:{value:this.params.lineThickness},
-        uLineCount:{value:this.params.lineCount}, uLineSpacing:{value:this.params.lineSpacing}
+        uLineCount:{value:this.params.lineCount}, uLineSpacing:{value:this.params.lineSpacing},
+        uSpacingMode:{value:0.0}, uExpBase:{value:this.params.exponentialBase},
+        uSinFreq:{value:this.params.sinusoidFreq}, uSinAmp:{value:this.params.sinusoidAmp},
+        uLogBase:{value:this.params.logBase},
+        uLineOffset:{value:this.params.lineOffset}, uLineJitterAmp:{value:this.params.lineJitterAmp},
+        uLineJitterSpeed:{value:this.params.lineJitterSpeed}, uLineSoftness:{value:this.params.lineSoftness},
+        uLineBrightness:{value:this.params.lineBrightness}, uLineSide:{value:0.0}
       };
       this.material = new THREE.ShaderMaterial({
         uniforms: this.uniforms,
@@ -149,6 +201,28 @@
       this.uniforms.uLineThickness.value = this.params.lineThickness;
       this.uniforms.uLineCount.value = this.params.lineCount;
       this.uniforms.uLineSpacing.value = this.params.lineSpacing;
+      // Map spacing mode string to numeric enum for shader
+      var sm = this.params.spacingMode;
+      var mode = 0.0;
+      if (sm === 'Linear') mode = 0.0;
+      else if (sm === 'Exponential') mode = 1.0;
+      else if (sm === 'Sinusoidal') mode = 2.0;
+      else if (sm === 'Logarithmic') mode = 3.0;
+      this.uniforms.uSpacingMode.value = mode;
+      this.uniforms.uExpBase.value = this.params.exponentialBase;
+      this.uniforms.uSinFreq.value = this.params.sinusoidFreq;
+      this.uniforms.uSinAmp.value = this.params.sinusoidAmp;
+      this.uniforms.uLogBase.value = this.params.logBase;
+      this.uniforms.uLineOffset.value = this.params.lineOffset;
+      this.uniforms.uLineJitterAmp.value = this.params.lineJitterAmp;
+      this.uniforms.uLineJitterSpeed.value = this.params.lineJitterSpeed;
+      this.uniforms.uLineSoftness.value = this.params.lineSoftness;
+      this.uniforms.uLineBrightness.value = this.params.lineBrightness;
+      // Line side mapping
+      var ls = this.params.lineSide;
+      var side = 0.0;
+      if (ls === 'Inside') side = 1.0; else if (ls === 'Outside') side = 2.0; else side = 0.0;
+      this.uniforms.uLineSide.value = side;
     }
     onResize(){ const d=this.renderer.domElement; if (this.uniforms) this.uniforms.resolution.value.set(d.width,d.height); }
     dispose(){ super.dispose(); this.geometry?.dispose?.(); this.material?.dispose?.(); }

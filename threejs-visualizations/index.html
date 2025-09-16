@@ -270,7 +270,30 @@
       gui.add(p, 'hueShift', 0.0, 1.0, 0.001).name('Hue Shift');
     } else if (kind === 'noteshape'){
       const p = currentViz.params || {};
-      gui.add(p, 'lineThickness', 0.5, 8.0, 0.05).name('Line Thickness');
+      const ctlThickness = gui.add(p, 'lineThickness', 0.5, 8.0, 0.05).name('Line Thickness');
+      const ctlCount = gui.add(p, 'lineCount', 1, 10, 1).name('Lines');
+      const ctlSpacing = gui.add(p, 'lineSpacing', 1.0, 60.0, 1.0).name('Line Spacing (px)');
+      const ctlMode = gui.add(p, 'spacingMode', ['Linear','Exponential','Sinusoidal','Logarithmic']).name('Spacing Mode');
+      const ctlExp = gui.add(p, 'exponentialBase', 1.2, 3.0, 0.01).name('Exp Base');
+      const ctlSinF = gui.add(p, 'sinusoidFreq', 0.5, 4.0, 0.01).name('Sine Freq');
+      const ctlSinA = gui.add(p, 'sinusoidAmp', 0.1, 2.0, 0.01).name('Sine Amp');
+      const ctlLog = gui.add(p, 'logBase', 1.5, 10.0, 0.1).name('Log Base');
+      // New: brightness, softness, offset, side, jitter
+      gui.add(p, 'lineBrightness', 0.2, 2.0, 0.01).name('Line Brightness');
+      gui.add(p, 'lineSoftness', 0.2, 2.0, 0.01).name('Line Softness');
+      gui.add(p, 'lineOffset', -40.0, 40.0, 1.0).name('Line Offset (px)');
+      const ctlSide = gui.add(p, 'lineSide', ['Both','Inside','Outside']).name('Line Side');
+      gui.add(p, 'lineJitterAmp', 0.0, 12.0, 0.1).name('Jitter Amp (px)');
+      gui.add(p, 'lineJitterSpeed', 0.0, 3.0, 0.01).name('Jitter Speed');
+      function updateModeControls(){
+        const m = p.spacingMode;
+        ctlExp.domElement.parentElement.style.display = (m==='Exponential') ? '' : 'none';
+        ctlSinF.domElement.parentElement.style.display = (m==='Sinusoidal') ? '' : 'none';
+        ctlSinA.domElement.parentElement.style.display = (m==='Sinusoidal') ? '' : 'none';
+        ctlLog.domElement.parentElement.style.display = (m==='Logarithmic') ? '' : 'none';
+      }
+      updateModeControls();
+      ctlMode.onChange(updateModeControls);
     } else if (kind === 'hexagon'){
       const p = currentViz.params || {};
       gui.add(p, 'speed', 0.1, 3.0, 0.01).name('Speed');
