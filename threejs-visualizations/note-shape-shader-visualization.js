@@ -4,6 +4,8 @@
     uniform float time; uniform vec2 resolution;
     uniform float bassLevel; uniform float midLevel; uniform float trebleLevel;
     uniform float uLineThickness;
+    uniform float uLineCount;
+    uniform float uLineSpacing;
 
     // Shadertoy-style helpers adapted to WebGL1
     float patternFrac(float x){ return fract(1.5*x); }
@@ -68,15 +70,31 @@
       float w = patternFreq(t);
       float a = patternFrac(t);
 
-      // Edge estimation
+      // Edge estimation and multi-contour generation
       float e = 2.0 / resolution.y;
       float f  = shape(p,n,w,a);
       float fx = shape(p+vec2(e,0.0),n,w,a);
       float fy = shape(p+vec2(0.0,e),n,w,a);
-      float d = abs(f) / max(1e-4, length(vec2(f-fx, f-fy)));
+      float gradLen = max(1e-4, length(vec2(f-fx, f-fy)));
+      float d = abs(f) / gradLen; // approximate distance to boundary
+
+      // Base single-edge mask retained for inner shading
       float dScaled = d / max(0.001, uLineThickness);
       float q = smoothstep(1.0, 2.0, dScaled);
       q *= 0.8 + 0.2*smoothstep(0.0, 10.0, dScaled);
+
+      // Multi-line contours: lines at distances k * uLineSpacing
+      float lines = 0.0;
+      float count = clamp(uLineCount, 1.0, 10.0);
+      float wline = max(0.001, uLineThickness);
+      for (int i=0; i<10; i++) {
+        if (float(i) >= count) break;
+        float target = float(i) * max(0.0001, uLineSpacing);
+        float ad = abs(d - target);
+        // Soft band for each ring
+        float ring = 1.0 - smoothstep(wline, wline + 0.5*wline, ad);
+        lines = max(lines, ring);
+      }
 
       // Base color with subtle audio tint
       vec3 col = vec3(1.0, 0.8, 0.6);
@@ -95,18 +113,22 @@
       // Subtle hue drift with time and treble
       col *= 0.85 + 0.35*(0.5 + 0.5*sin(t*0.15 + 5.0*treb + length(p)*2.0));
 
+      // Apply multi-line contour overlay (brighten along lines)
+      col = mix(col, vec3(1.0), clamp(lines, 0.0, 1.0));
+
       gl_FragColor = vec4(col, 1.0);
     }
   `;
 
   class NoteShapeShaderVisualization extends ThreeJSVisualization {
     initialize(){
-      this.params = { twist: 0.6, zoom: 1.0, lineThickness: 3.0 };
+      this.params = { twist: 0.6, zoom: 1.0, lineThickness: 3.0, lineCount: 6, lineSpacing: 8.0 };
       this.geometry = new THREE.PlaneBufferGeometry(50,50,1,1);
       this.uniforms = {
         time:{value:0}, resolution:{value:new THREE.Vector2(1,1)},
         bassLevel:{value:0}, midLevel:{value:0}, trebleLevel:{value:0},
-        uLineThickness:{value:this.params.lineThickness}
+        uLineThickness:{value:this.params.lineThickness},
+        uLineCount:{value:this.params.lineCount}, uLineSpacing:{value:this.params.lineSpacing}
       };
       this.material = new THREE.ShaderMaterial({
         uniforms: this.uniforms,
@@ -125,6 +147,8 @@
       this.uniforms.midLevel.value = audio.mid || 0;
       this.uniforms.trebleLevel.value = audio.treble || 0;
       this.uniforms.uLineThickness.value = this.params.lineThickness;
+      this.uniforms.uLineCount.value = this.params.lineCount;
+      this.uniforms.uLineSpacing.value = this.params.lineSpacing;
     }
     onResize(){ const d=this.renderer.domElement; if (this.uniforms) this.uniforms.resolution.value.set(d.width,d.height); }
     dispose(){ super.dispose(); this.geometry?.dispose?.(); this.material?.dispose?.(); }
