@@ -7,6 +7,7 @@
     uniform float bassLevel; uniform float midLevel; uniform float trebleLevel;
     uniform float uSpeed; uniform float uScaleA; uniform float uScaleB;
     uniform float uDistort; uniform float uRedIntensity; uniform float uVignette;
+    uniform sampler2D uTex; uniform float uUseTex; uniform float uTexMix; uniform float uTexScale;
 
     // Hashes and value noise (3D) - textureless
     float hash1(vec2 p){ float n = dot(p, vec2(127.1,311.7)); return fract(sin(n)*43758.5453); }
@@ -110,6 +111,41 @@
       float mask = smoothstep(0.45, 0.451, n);
       col = mix(col, colb, mask);
 
+      // Gentle spiral kaleidoscope inside each hex (preserve edges)
+      {
+        float amp = 0.6*bass + 0.3*mid + 0.1*treb;
+        vec2 pHex = uScaleB*pos + 0.6*tB;
+        vec2 qL = vec2( pHex.x*2.0*(1.0/sqrt(3.0)), pHex.y + pHex.x*(1.0/sqrt(3.0)) );
+        vec2 ppL = vec2( qL.x + floor(0.5 + pHex.y/1.5), 4.0*pHex.y/3.0 )*0.5 + 0.5;
+        vec2 cell = (fract(ppL) - 0.5) * vec2(1.0, 0.85);
+        float rC = length(cell);
+        float th = atan(cell.y, cell.x);
+        float k = 0.5 + 0.5*cos(6.0*th + rC*(10.0 + 20.0*amp) - time*(0.6 + 1.2*mid));
+        float innerMask = 1.0 - smoothstep(0.28, 0.46, rC);
+        vec3 spiralCol = hsv2rgb(vec3(
+          fract(0.58 + 0.12*tid + 0.08*mid),
+          clamp(0.50 + 0.30*mid, 0.0, 1.0),
+          mix(0.45, 0.85, k)
+        ));
+        col = mix(col, spiralCol, innerMask * 0.35 * (0.5 + 0.5*amp));
+      }
+
+      // Optional texture overlay inside hex cells
+      if (uUseTex > 0.5) {
+        vec2 pHex = uScaleB*pos + 0.6*tB;
+        vec2 qL = vec2( pHex.x*2.0*(1.0/sqrt(3.0)), pHex.y + pHex.x*(1.0/sqrt(3.0)) );
+        vec2 ppL = vec2( qL.x + floor(0.5 + pHex.y/1.5), 4.0*pHex.y/3.0 )*0.5 + 0.5;
+        vec2 cell = (fract(ppL) - 0.5) * vec2(1.0, 0.85);
+        float rC = length(cell);
+        vec2 uvh = (cell/vec2(1.0,0.85)) + 0.5;
+        uvh = fract(uvh * uTexScale);
+        vec3 tcol = texture2D(uTex, uvh).rgb;
+        float innerMask = 1.0 - smoothstep(0.28, 0.46, rC);
+        col = mix(col, tcol, innerMask * mask * clamp(uTexMix, 0.0, 1.0));
+      }
+
+
+
       // Treble-driven fine flicker
       col *= 1.0 + 0.15*treb;
 
@@ -132,14 +168,19 @@
         scaleB: 6.0,
         distort: 1.2,
         redIntensity: 1.0,
-        vignette: 0.10
+        vignette: 0.10,
+        zoomOut: 12.0,
+        useTexture: false,
+        texMix: 0.4,
+        texScale: 1.0
       };
       this.geometry = new THREE.PlaneBufferGeometry(50,50,1,1);
       this.uniforms = {
         time:{value:0}, resolution:{value:new THREE.Vector2(1,1)},
         bassLevel:{value:0}, midLevel:{value:0}, trebleLevel:{value:0},
         uSpeed:{value:this.params.speed}, uScaleA:{value:this.params.scaleA}, uScaleB:{value:this.params.scaleB},
-        uDistort:{value:this.params.distort}, uRedIntensity:{value:this.params.redIntensity}, uVignette:{value:this.params.vignette}
+        uDistort:{value:this.params.distort}, uRedIntensity:{value:this.params.redIntensity}, uVignette:{value:this.params.vignette},
+        uTex:{value:null}, uUseTex:{value:0}, uTexMix:{value:this.params.texMix}, uTexScale:{value:this.params.texScale}
       };
       this.material = new THREE.ShaderMaterial({
         uniforms:this.uniforms,
@@ -149,7 +190,10 @@
       });
       this.mesh = new THREE.Mesh(this.geometry, this.material);
       this.scene.add(this.mesh);
-      this.camera.position.set(0,0,5);
+      // Texture loader for optional hex textures
+      this.textureLoader = new THREE.TextureLoader();
+
+      this.camera.position.set(0,0,this.params.zoomOut);
       this.onResize();
     }
     update(audio){
@@ -165,7 +209,31 @@
       this.uniforms.uDistort.value = p.distort;
       this.uniforms.uRedIntensity.value = p.redIntensity;
       this.uniforms.uVignette.value = p.vignette;
+      // Texture uniforms
+      this.uniforms.uTexMix.value = p.texMix;
+      this.uniforms.uTexScale.value = p.texScale;
+      this.uniforms.uUseTex.value = p.useTexture ? 1.0 : 0.0;
+      // Camera zoom
+      if (this.camera) this.camera.position.z = p.zoomOut;
     }
+    setTextureURL(url){
+      if (!this.textureLoader) this.textureLoader = new THREE.TextureLoader();
+      this.textureLoader.load(url, tex => {
+        tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+        tex.anisotropy = (this.renderer?.capabilities?.getMaxAnisotropy?.() || 1);
+        tex.minFilter = THREE.LinearMipMapLinearFilter;
+        tex.magFilter = THREE.LinearFilter;
+        this._setTexture(tex);
+      });
+    }
+
+    _setTexture(tex){
+      if (this._texture && this._texture !== tex){ try{ this._texture.dispose?.(); }catch(e){} }
+      this._texture = tex;
+      if (this.uniforms){ this.uniforms.uTex.value = tex; this.uniforms.uUseTex.value = 1.0; }
+      if (this.params){ this.params.useTexture = true; }
+    }
+
     onResize(){
       if (!this.uniforms) return;
       const d = this.renderer.domElement;
@@ -175,6 +243,7 @@
       super.dispose();
       this.geometry?.dispose?.();
       this.material?.dispose?.();
+      try{ this._texture?.dispose?.(); }catch(e){}
     }
   }
   window.HexagonShaderVisualization = HexagonShaderVisualization;

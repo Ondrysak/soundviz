@@ -277,6 +277,21 @@
       gui.add(p, 'distort', 0.8, 2.0, 0.01).name('Distort');
       gui.add(p, 'redIntensity', 0.0, 2.0, 0.01).name('Color Intensity');
       gui.add(p, 'vignette', 0.05, 0.6, 0.005).name('Vignette');
+
+	      // Zoom and texture controls for Hex Cells
+	      gui.add(p, 'zoomOut', 3.0, 30.0, 0.1).name('Zoom Out');
+	      gui.add(p, 'useTexture').name('Use Texture').onChange(v=> currentViz.params.useTexture = v);
+	      gui.add(p, 'texMix', 0.0, 1.0, 0.01).name('Texture Mix');
+	      gui.add(p, 'texScale', 0.5, 5.0, 0.01).name('Texture Scale');
+	      const gc = document.getElementById('guiContainer');
+	      const texRow = document.createElement('div'); texRow.className = 'row';
+	      texRow.innerHTML = '<label>Hex Texture:</label><input type="file" id="hexTexInput" accept="image/*" />';
+	      gc.appendChild(texRow);
+	      document.getElementById('hexTexInput').addEventListener('change', (e)=>{
+	        const file = e.target.files[0]; if (!file) return; const url = URL.createObjectURL(file);
+	        if (currentViz && typeof currentViz.setTextureURL === 'function') { currentViz.setTextureURL(url); }
+	      });
+
     } else if (kind === 'deform'){
       const p = currentViz.params || {};
       gui.add(p, 'amplitude', 0.0, 1.5, 0.01).name('Amplitude');
