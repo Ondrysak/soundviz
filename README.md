@@ -1,169 +1,101 @@
-# 🎵 Sound Visualizer - Modular Architecture
+# 🎵 Soundviz – Canvas 2D and Three.js visualizers
 
-A browser-based real-time audio visualizer with a modular architecture that supports multiple psychedelic and fractal visualization modes.
+Real‑time, audio‑reactive visualizations implemented in two stacks:
+- Canvas 2D (root) – modular, lightweight visualizations
+- Three.js (threejs-visualizations/) – shader‑driven 3D/GL visuals
+
+## 🔭 What’s inside
+
+- Root Canvas 2D app (index.html)
+  - Managed by audio-visualizer.js and the visualizations/ directory
+  - Dozens of modes (spectrum bars, kaleidoscope, fractals, tunnels, etc.)
+- Three.js showcase (threejs-visualizations/index.html)
+  - GPU shader visualizations and 3D scenes (hex cells, plasma, Mandelbrot DE, Note Shape Shader, particles, etc.)
+
+## 🚀 Quick start
+
+- Canvas 2D suite (root):
+  1) Open index.html in a modern browser
+  2) Click “Start Visualization” and allow microphone access
+  3) Pick a mode in the dropdown
+
+- Three.js suite:
+  1) Open threejs-visualizations/index.html
+  2) Pick a visualization in the dropdown; use the GUI panel to tweak parameters
+
+Tip: On Chrome, ensure microphone permissions are granted; use HTTPS or localhost to avoid permission issues.
 
 ## 🏗️ Architecture
 
-The visualizer is now built with a modular architecture that makes it easy to add new visualizations:
+### Canvas 2D (root)
+- Core files
+  - audio-visualizer.js – audio input, analysis, and mode switching
+  - visualizations/base-visualization.js – common helpers/utilities
+- Add a new Canvas 2D visualization
+  1) Create visualizations/my-visual.js
+  2) Extend BaseVisualization and implement draw()
+  3) Add a <script> tag in index.html and add a dropdown entry
 
-### Core Files
-- **`audio-visualizer.js`** - Main application class that handles audio input and visualization management
-- **`visualizations/base-visualization.js`** - Base class that all visualizations extend
+### Three.js (shader/3D)
+- Each visualization is a small JS module creating a Three.js scene with dat.GUI controls
+- Notable modes: Hexagon Shader (with active‑cell texturing), Plasma, Mandelbrot DE, Vertex Distortion, Note Shape Shader (multi‑contour spacing modes, thickness, spacing, exponential/sinusoidal/logarithmic distributions, jitter/offset/inside‑outside/brightness)
+- Add a new Three.js visualization
+  1) Create threejs-visualizations/my-three-viz.js extending the provided base pattern
+  2) Include it in threejs-visualizations/index.html
+  3) Add to the dropdown and wire up params/uniforms
 
-### Visualization Modules
-Each visualization is in its own file in the `visualizations/` directory:
+## 🎮 Audio data contract (Canvas 2D)
 
-- **`frequency-bars.js`** - Classic frequency spectrum bars
-- **`waveform.js`** - Time-domain waveform display
-- **`circular-spectrum.js`** - Radial frequency spectrum
-- **`combined-view.js`** - Split view with frequency bars and waveform
-- **`hexagonal-grid.js`** - Hexagonal grid pattern responsive to frequencies
-- **`rotating-hexagons.js`** - Multi-layered rotating hexagonal patterns
-- **`psychedelic-particles.js`** - Particle system with trails and energy webs
-- **`kaleidoscope.js`** - Symmetrical kaleidoscope patterns
-- **`fractal-tree.js`** - Recursive fractal tree structures
-- **`fractal-spiral.js`** - Fibonacci-like spiral patterns
-- **`fractal-mandala.js`** - Mandelbrot-inspired fractal patterns
-
-## 🎨 Creating New Visualizations
-
-To add a new visualization:
-
-1. **Create a new file** in the `visualizations/` directory
-2. **Extend BaseVisualization** class:
-
-```javascript
-class MyVisualization extends BaseVisualization {
-    constructor(ctx, width, height) {
-        super(ctx, width, height);
-    }
-    
-    // Optional: Initialize state
-    initialize() {
-        // Setup code here
-    }
-    
-    // Optional: Handle canvas resize
-    onResize(width, height) {
-        super.onResize(width, height);
-        // Resize handling code here
-    }
-    
-    // Required: Main drawing method
-    draw(audioData) {
-        const { frequencyData, timeData, bufferLength, time } = audioData;
-        
-        // Your visualization code here
-        // Use this.ctx for canvas drawing
-        // Use this.width, this.height for dimensions
-        // Use this.centerX, this.centerY for center point
-    }
-    
-    // Optional: Cleanup resources
-    cleanup() {
-        // Cleanup code here
-    }
-}
-
-// Register the visualization
-document.addEventListener('DOMContentLoaded', () => {
-    if (window.audioVisualizer) {
-        window.audioVisualizer.registerVisualization('myViz', MyVisualization);
-    }
-});
-```
-
-3. **Add the script tag** to `index.html`
-4. **Add option** to the dropdown in `index.html`
-
-## 🛠️ Available Helper Methods
-
-The `BaseVisualization` class provides useful helper methods:
-
-### Audio Analysis
-- `calculateAudioMetrics(frequencyData, bufferLength)` - Returns bass, mid, treble, and total energy
-- `getFrequencyColor(freqIndex, time, energy)` - Get color based on frequency
-- `getPsychedelicColor(index, time, energy, alpha)` - Get psychedelic color
-
-### Drawing Helpers
-- `drawHexagon(x, y, size)` - Draw a hexagon
-- `drawPolygon(x, y, size, sides, rotation)` - Draw any polygon
-- `createRadialGradient(x, y, r1, r2, colorStops)` - Create radial gradient
-- `createLinearGradient(x1, y1, x2, y2, colorStops)` - Create linear gradient
-
-### Utility Functions
-- `map(value, inMin, inMax, outMin, outMax)` - Map value between ranges
-- `constrain(value, min, max)` - Constrain value to range
-- `hslToRgb(h, s, l)` - Convert HSL to RGB
-
-## 🎵 Audio Data Structure
-
-The `audioData` object passed to `draw()` contains:
+The draw(audioData) method receives:
 
 ```javascript
 {
-    frequencyData: Uint8Array,  // FFT frequency data (0-255)
-    timeData: Uint8Array,       // Time domain data (0-255)
-    bufferLength: number,       // Length of frequency data
-    time: number,               // Animation time counter
-    canvas: {
-        width: number,
-        height: number
-    }
+  frequencyData: Uint8Array,
+  timeData: Uint8Array,
+  bufferLength: number,
+  time: number,
+  canvas: { width: number, height: number }
 }
 ```
 
-## 🚀 Features
+Helpers in BaseVisualization include color utilities, geometry helpers (polygons/hexagons), gradients, map/constrain, and audio metric calculators (bass/mid/treble/energy).
 
-- **Real-time microphone input** using Web Audio API
-- **Modular architecture** for easy extension
-- **Multiple visualization modes** with smooth transitions
-- **Audio-reactive parameters** (bass, mid, treble response)
-- **Psychedelic effects** with color cycling and trails
-- **Fractal mathematics** with real-time computation
-- **Responsive design** that adapts to screen size
-- **Performance optimized** for smooth 60fps rendering
-
-## 🎮 Usage
-
-1. Open `index.html` in a modern web browser
-2. Click "Start Visualization" and allow microphone access
-3. Select different visualization modes from the dropdown
-4. Make sounds, play music, or speak to see the visualizations react!
-
-## 🔧 Browser Compatibility
-
-- Chrome/Chromium (recommended)
-- Firefox
-- Safari (with some limitations)
-- Edge
-
-Requires a browser that supports:
-- Web Audio API
-- Canvas 2D
-- ES6 Classes
-- getUserMedia API
-
-## 📁 File Structure
+## 📁 Repository layout
 
 ```
 soundviz/
-├── index.html                          # Main HTML file
-├── audio-visualizer.js                 # Core application
-├── visualizations/
-│   ├── base-visualization.js           # Base class
-│   ├── frequency-bars.js               # Frequency bars
-│   ├── waveform.js                     # Waveform display
-│   ├── circular-spectrum.js            # Circular spectrum
-│   ├── combined-view.js                # Combined view
-│   ├── hexagonal-grid.js               # Hexagonal grid
-│   ├── rotating-hexagons.js            # Rotating hexagons
-│   ├── psychedelic-particles.js        # Particle system
-│   ├── kaleidoscope.js                 # Kaleidoscope
-│   ├── fractal-tree.js                 # Fractal trees
-│   ├── fractal-spiral.js               # Fractal spirals
-│   └── fractal-mandala.js              # Fractal mandala
-└── README.md                           # This file
+├─ index.html                      # Canvas 2D launcher (with mode dropdown)
+├─ audio-visualizer.js             # Core Canvas 2D app & audio plumbing
+├─ visualizations/                 # Canvas 2D visualization modules
+│  ├─ base-visualization.js
+│  ├─ frequency-bars.js, waveform.js, circular-spectrum.js, ...
+│  ├─ kaleidoscope.js, psychedelic-particles.js
+│  ├─ fractal-tree.js, mandelbrot-set.js, julia-set.js, ...
+│  └─ tunnel-3d.js, warp-shader.js, etc.
+├─ threejs-visualizations/         # Three.js + shaders showcase
+│  ├─ index.html                   # Three.js UI & dat.GUI wiring
+│  ├─ base-threejs-visualization.js
+│  ├─ hexagon-shader-visualization.js, plasma-shader-visualization.js, ...
+│  ├─ note-shape-shader-visualization.js (multi‑contour lines)
+│  └─ gummo.png (example texture)
+├─ d3-visualizations.html          # Standalone D3.js gallery (optional)
+├─ D3_README.md                    # Docs for the D3 page
+└─ README.md                       # This file
 ```
 
-Ready to add more trippy visualizations! 🌈✨
+## 🔧 Browser requirements
+- Web Audio API, getUserMedia
+- Canvas 2D for root visualizations
+- WebGL for Three.js (with standard extensions)
+
+## 🧩 Adding more visualizations
+- Prefer small, focused modules
+- Expose parameters via GUI (Canvas: HTML controls; Three.js: dat.GUI)
+- Keep brightness balanced; avoid hard additive blending unless clamped
+
+## ✨ Highlights
+- Multi‑contour Note Shape Shader (Three.js): adjustable line count, pixel spacing, thickness, spacing modes (linear/exp/sinusoidal/log), side selection (inside/outside/both), softness, brightness, jitter, offset; audio‑reactive swirl and tint
+- Hex Cells with texture‑only on active cells, default texture & mix
+- Variety of Canvas 2D fractals and patterns
+
+Enjoy exploring both stacks! 🌈🎚️
