@@ -41,6 +41,10 @@
   <script src="./lensflares-visualization.js"></script>
 
   <script src="./spotlights-visualization.js"></script>
+  <script src="./trippy-shader-visualization.js"></script>
+
+  <script src="./mandelbrot-de-visualization.js"></script>
+
 
 
 </head>
@@ -65,6 +69,10 @@
             <option value="feedback" selected>Feedback Post</option>
             <option value="torusknot">TorusKnot Material</option>
             <option value="scatter">Instancing Scatter</option>
+            <option value="mandelbrot">Mandelbrot DE</option>
+
+            <option value="trippy">Trippy Shader</option>
+
             <option value="lensflares">Lens Flares</option>
             <option value="spotlights">Spotlights</option>
           </select>
@@ -200,6 +208,10 @@
     else if (kind === 'plasma') currentViz = new PlasmaShaderVisualization(container);
     else if (kind === 'bars3d') currentViz = new AudioBars3DVisualization(container);
     else if (kind === 'vertex') currentViz = new VertexDistortionVisualization(container);
+    else if (kind === 'trippy') currentViz = new TrippyShaderVisualization(container);
+    else if (kind === 'mandelbrot') currentViz = new MandelbrotDEVisualization(container);
+
+
     else if (kind === 'grid') currentViz = new InstancedGridVisualization(container);
     else if (kind === 'ribbons') currentViz = new RibbonTrailsVisualization(container);
     else if (kind === 'galaxy') currentViz = new GalaxyParticlesVisualization(container);
@@ -240,7 +252,25 @@
       const p = currentViz.params || {};
       gui.add(p, 'spin', 0.0, 2.0, 0.01).name('Spin');
       gui.add(p, 'waveHeight', 0.0, 2.0, 0.01).name('Wave Height');
-      gui.add(p, 'spacing', 0.2, 1.2, 0.01).name('Ring Spacing');
+    } else if (kind === 'trippy'){
+      const p = currentViz.params || {};
+      gui.add(p, 'zoom', 0.5, 2.5, 0.01).name('Zoom');
+    } else if (kind === 'mandelbrot'){
+      const p = currentViz.params || {};
+      gui.add(p, 'centerX', -2.5, 1.5, 0.0005).name('Center X');
+      gui.add(p, 'centerY', -1.5, 1.5, 0.0005).name('Center Y');
+      gui.add(p, 'zoomPow', 8.0, 18.0, 0.1).name('Zoom Power');
+      gui.add(p, 'speed', 0.0, 2.0, 0.01).name('Speed');
+      gui.add(p, 'colorExp', 0.0, 1.0, 0.01).name('Color Exp');
+      gui.add(p, 'hueShift', 0.0, 1.0, 0.001).name('Hue Shift');
+
+      gui.add(p, 'swirl', 0.0, 3.0, 0.01).name('Swirl');
+      gui.add(p, 'warp', 0.0, 2.0, 0.01).name('Warp');
+      gui.add(p, 'detail', 0.5, 4.0, 0.01).name('Detail');
+      gui.add(p, 'speed', 0.1, 3.0, 0.01).name('Speed');
+      gui.add(p, 'colorShift', 0.0, 2.0, 0.01).name('Color Shift');
+
+
     } else if (kind === 'deform'){
       const p = currentViz.params || {};
       gui.add(p, 'amplitude', 0.0, 1.5, 0.01).name('Amplitude');
