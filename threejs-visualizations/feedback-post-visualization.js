@@ -15,7 +15,7 @@
     uniform float uToneStrength; uniform float uBrightness;
     uniform float uBassFloor; uniform float uMidFloor; uniform float uTrebleFloor;
     // New controls
-    uniform float uPatternMode; // 0=kalei,1=gridMirror,2=voronoi,3=hex,4=tri,5=spiralGrid,6=concentric
+    uniform float uPatternMode; // 0=kalei,1=gridMirror,2=voronoi,3=hex,4=tri,5=spiralGrid,6=concentric,7=radialSpokes
     uniform float uGridScale;
     uniform float uPatternRotate; uniform vec2 uPatternOffset; uniform float uPatternMorph;
     uniform float uPaletteMode; // 0=continuous,1=quantized,2=triadic,3=complementary,4=analogous,5=splitComp,6=tetradic,7=monochrome
@@ -97,6 +97,19 @@
       }
       return mv;
     }
+    // Radial spokes/starburst mapping (no extra uniforms)
+    vec2 radialSpokes(vec2 p, float spokes, float width){
+      float a = atan(p.y,p.x);
+      float r = length(p);
+      float m = 6.2831853/max(1.0, spokes);
+      float sector = floor((a + 0.5*m)/m);
+      float center = sector*m;
+      float da = a - center;
+      float mask = smoothstep(width, 0.0, abs(da)); // near spoke center -> 1
+      float a2 = mix(a, center, 0.85*mask);
+      return vec2(cos(a2), sin(a2)) * r;
+    }
+
 
     vec3 samplePrev(vec2 uv){ return texture2D(prevTex, clamp(uv, 0.0, 1.0)).rgb; }
 
@@ -125,8 +138,12 @@
         q = triMirror(pp, max(uGridScale, 0.001));
       } else if (uPatternMode < 5.5){
         q = spiralGrid(pp, max(1.0, seg), m);
-      } else {
+      } else if (uPatternMode < 6.5){
         q = concentric(pp, max(1.0, seg));
+      } else {
+        float spokes = max(4.0, seg);
+        float width  = clamp(0.25 - 0.12*m, 0.05, 0.4);
+        q = radialSpokes(pp, spokes, width);
       }
 
       // Spiral/radial warp + non-radial distortions
