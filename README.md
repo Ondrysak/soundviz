@@ -78,8 +78,6 @@ soundviz/
 │  ├─ hexagon-shader-visualization.js, plasma-shader-visualization.js, ...
 │  ├─ note-shape-shader-visualization.js (multi‑contour lines)
 │  └─ gummo.png (example texture)
-├─ d3-visualizations.html          # Standalone D3.js gallery (optional)
-├─ D3_README.md                    # Docs for the D3 page
 └─ README.md                       # This file
 ```
 
