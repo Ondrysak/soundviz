@@ -47,6 +47,8 @@
   <script src="./hexagon-shader-visualization.js"></script>
   <script src="./note-shape-shader-visualization.js"></script>
   <script src="./orbifold-folds-visualization.js"></script>
+  <script src="./meta-pipes-visualization.js"></script>
+
 
 
 
@@ -76,6 +78,7 @@
             <option value="hexagon">Hex Cells</option>
             <option value="noteshape">Note Shape Shader</option>
             <option value="orbifold">Orbifold Folds</option>
+            <option value="metapipes">Meta Pipes Lattice</option>
             <option value="mandelbrot">Mandelbrot DE</option>
             <option value="trippy">Trippy Shader</option>
             <option value="lensflares">Lens Flares</option>
@@ -218,6 +221,7 @@
     else if (kind === 'bars3d') currentViz = new AudioBars3DVisualization(container);
     else if (kind === 'vertex') currentViz = new VertexDistortionVisualization(container);
     else if (kind === 'trippy') currentViz = new TrippyShaderVisualization(container);
+    else if (kind === 'metapipes') currentViz = new MetaPipesVisualization(container);
     else if (kind === 'mandelbrot') currentViz = new MandelbrotDEVisualization(container);
 
 
@@ -332,9 +336,41 @@
       f.add(p, 'hueBase', 0.0, 1.0, 0.001).name('Hue Base');
       f.add(p, 'hueRange', 0.0, 1.0, 0.001).name('Hue Range');
       f.add(p, 'hueSpeed', 0.0, 3.0, 0.01).name('Hue Speed');
-      f.add(p, 'sat', 0.0, 1.0, 0.001).name('Saturation');
-      f.add(p, 'val', 0.1, 2.0, 0.01).name('Value');
-      f.open();
+    } else if (kind === 'metapipes'){
+      const p = currentViz.params || {};
+      // Quick knobs
+      gui.add(p, 'tile', 1.2, 4.0, 0.01).name('Tile Size');
+      gui.add(p, 'pipeR', 0.05, 0.6, 0.001).name('Pipe Radius');
+      gui.add(p, 'aa', { Off:1, x2:2 }).name('Antialias');
+
+      // Structure
+      const fs = gui.addFolder('Structure');
+      fs.add(p, 'swirl', 0.0, 2.0, 0.01).name('Swirl');
+      fs.add(p, 'swirlFreq', 0.2, 4.0, 0.01).name('Swirl Freq');
+      fs.add(p, 'swirlSpeed', 0.0, 3.0, 0.01).name('Swirl Speed');
+      fs.add(p, 'bandFreq', 0.5, 12.0, 0.01).name('Band Freq');
+      fs.add(p, 'bandStr', 0.0, 1.0, 0.01).name('Band Strength');
+
+      // Camera
+      const fc = gui.addFolder('Camera');
+      fc.add(p, 'camRadius', 1.0, 6.0, 0.01).name('Radius');
+      fc.add(p, 'camHeight', -2.0, 2.0, 0.01).name('Height');
+      fc.add(p, 'fov', 0.5, 4.0, 0.01).name('FOV');
+
+      // Lighting & Color
+      const fl = gui.addFolder('Lighting');
+      fl.add(p, 'ambient', 0.0, 1.0, 0.001).name('Ambient');
+      fl.add(p, 'key', 0.0, 2.5, 0.01).name('Key');
+      fl.add(p, 'back', 0.0, 1.5, 0.01).name('Back');
+      fl.add(p, 'fog', 0.0, 1.0, 0.01).name('Fog');
+
+      const fcol = gui.addFolder('Color');
+      fcol.add(p, 'hueBase', 0.0, 1.0, 0.001).name('Hue Base');
+      fcol.add(p, 'hueRange', 0.0, 1.0, 0.001).name('Hue Range');
+      fcol.add(p, 'sat', 0.0, 1.0, 0.001).name('Saturation');
+      fcol.add(p, 'val', 0.1, 2.0, 0.01).name('Value');
+      fcol.open();
+
 
     } else if (kind === 'hexagon'){
       const p = currentViz.params || {};
