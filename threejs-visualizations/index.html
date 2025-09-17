@@ -46,6 +46,8 @@
   <script src="./mandelbrot-de-visualization.js"></script>
   <script src="./hexagon-shader-visualization.js"></script>
   <script src="./note-shape-shader-visualization.js"></script>
+  <script src="./orbifold-folds-visualization.js"></script>
+
 
 
 
@@ -73,6 +75,7 @@
             <option value="scatter">Instancing Scatter</option>
             <option value="hexagon">Hex Cells</option>
             <option value="noteshape">Note Shape Shader</option>
+            <option value="orbifold">Orbifold Folds</option>
             <option value="mandelbrot">Mandelbrot DE</option>
             <option value="trippy">Trippy Shader</option>
             <option value="lensflares">Lens Flares</option>
@@ -210,6 +213,7 @@
     else if (kind === 'plasma') currentViz = new PlasmaShaderVisualization(container);
     else if (kind === 'hexagon') currentViz = new HexagonShaderVisualization(container);
     else if (kind === 'noteshape') currentViz = new NoteShapeShaderVisualization(container);
+    else if (kind === 'orbifold') currentViz = new OrbifoldFoldsVisualization(container);
 
     else if (kind === 'bars3d') currentViz = new AudioBars3DVisualization(container);
     else if (kind === 'vertex') currentViz = new VertexDistortionVisualization(container);
@@ -294,6 +298,44 @@
       }
       updateModeControls();
       ctlMode.onChange(updateModeControls);
+    } else if (kind === 'orbifold'){
+      const p = currentViz.params || {};
+      // Quick knobs
+      gui.add(p, 'scale', 0.6, 2.5, 0.01).name('Scale');
+      gui.add(p, 'warp', 0.0, 1.5, 0.01).name('Warp');
+      gui.add(p, 'rot', 0.0, 2.5, 0.01).name('Rotation');
+      gui.add(p, 'aa', { Off:1, x2:2 }).name('Antialias');
+
+      // Structure
+      const fs = gui.addFolder('Structure');
+      fs.add(p, 'warpFreq', 0.5, 8.0, 0.01).name('Warp Freq');
+      fs.add(p, 'warpSpeed', 0.0, 3.0, 0.01).name('Warp Speed');
+      fs.add(p, 'axisMix', 0.0, 1.0, 0.001).name('Axis Mix');
+      fs.add(p, 'distCoeff', 0.05, 0.6, 0.001).name('Dist Coeff');
+
+      // Camera
+      const fc = gui.addFolder('Camera');
+      fc.add(p, 'camRadius', 1.0, 6.0, 0.01).name('Radius');
+      fc.add(p, 'camHeight', -2.0, 2.0, 0.01).name('Height');
+      fc.add(p, 'fov', 0.5, 4.0, 0.01).name('FOV');
+
+      // Lighting & Fog
+      const fl = gui.addFolder('Lighting');
+      fl.add(p, 'ambient', 0.0, 1.0, 0.001).name('Ambient');
+      fl.add(p, 'key', 0.0, 2.5, 0.01).name('Key');
+      fl.add(p, 'back', 0.0, 1.5, 0.01).name('Back');
+      fl.add(p, 'aoExp', 0.5, 3.0, 0.01).name('AO Exp');
+      fl.add(p, 'fog', 0.0, 1.0, 0.01).name('Fog');
+
+      // Color
+      const f = gui.addFolder('Color');
+      f.add(p, 'hueBase', 0.0, 1.0, 0.001).name('Hue Base');
+      f.add(p, 'hueRange', 0.0, 1.0, 0.001).name('Hue Range');
+      f.add(p, 'hueSpeed', 0.0, 3.0, 0.01).name('Hue Speed');
+      f.add(p, 'sat', 0.0, 1.0, 0.001).name('Saturation');
+      f.add(p, 'val', 0.1, 2.0, 0.01).name('Value');
+      f.open();
+
     } else if (kind === 'hexagon'){
       const p = currentViz.params || {};
       gui.add(p, 'speed', 0.1, 3.0, 0.01).name('Speed');
