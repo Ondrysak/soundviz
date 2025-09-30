@@ -49,6 +49,7 @@
   <script src="./note-shape-shader-visualization.js"></script>
   <script src="./orbifold-folds-visualization.js"></script>
   <script src="./meta-pipes-visualization.js"></script>
+  <script src="./lava-visualization.js"></script>
 
 
 
@@ -82,6 +83,7 @@
             <option value="metapipes">Meta Pipes Lattice</option>
             <option value="mandelbrot">Mandelbrot DE</option>
             <option value="trippy">Trippy Shader</option>
+            <option value="lava">Lava</option>
             <option value="lensflares">Lens Flares</option>
             <option value="spotlights">Spotlights</option>
           </select>
@@ -224,6 +226,7 @@
     else if (kind === 'trippy') currentViz = new TrippyShaderVisualization(container);
     else if (kind === 'metapipes') currentViz = new MetaPipesVisualization(container);
     else if (kind === 'mandelbrot') currentViz = new MandelbrotDEVisualization(container);
+    else if (kind === 'lava') currentViz = new LavaVisualization(container);
 
 
     else if (kind === 'grid') currentViz = new InstancedGridVisualization(container);
@@ -405,6 +408,30 @@
       gui.add(p, 'amplitude', 0.0, 1.5, 0.01).name('Amplitude');
     } else if (kind === 'plasma'){
       // No parameters yet
+    } else if (kind === 'lava'){
+      const p = currentViz.params || {};
+
+      // Flow controls
+      const flowFolder = gui.addFolder('Flow');
+      flowFolder.add(p, 'flowSpeed', 0.0, 3.0, 0.01).name('Flow Speed');
+      flowFolder.add(p, 'flowIntensity', 0.0, 3.0, 0.01).name('Flow Intensity');
+      flowFolder.add(p, 'spaceWarp', 0.0, 2.0, 0.01).name('Space Warp');
+      flowFolder.add(p, 'rotationAmount', 0.0, 2.0, 0.01).name('Rotation');
+      flowFolder.add(p, 'jitterAmount', 0.0, 2.0, 0.01).name('Jitter');
+      flowFolder.open();
+
+      // Visual controls
+      const visualFolder = gui.addFolder('Visual');
+      visualFolder.add(p, 'edgeIntensity', 0.0, 3.0, 0.01).name('Edge Intensity');
+      visualFolder.add(p, 'colorSpeed', 0.0, 3.0, 0.01).name('Color Speed');
+      visualFolder.open();
+
+      // Audio reactivity
+      const audioFolder = gui.addFolder('Audio Reactivity');
+      audioFolder.add(p, 'bassReactivity', 0.0, 3.0, 0.01).name('Bass');
+      audioFolder.add(p, 'midReactivity', 0.0, 3.0, 0.01).name('Mid');
+      audioFolder.add(p, 'trebleReactivity', 0.0, 3.0, 0.01).name('Treble');
+      audioFolder.open();
     } else if (kind === 'bars3d'){
       // No adjustable params without rebuild; could add read-only display
     } else if (kind === 'vertex'){

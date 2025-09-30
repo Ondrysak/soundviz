@@ -4,10 +4,29 @@ Audio-reactive visualizations built with Three.js and WebGL shaders.
 
 ## How to run
 
-1. Open `threejs-visualizations/index.html` in a browser
+1. Start the development server:
+   ```bash
+   uv run server.py
+   ```
+   This will:
+   - Start a local server at http://localhost:8000/
+   - Automatically open your browser
+   - Watch for file changes and auto-reload the browser
+
 2. Allow microphone access when prompted
 3. Select a visualization from the dropdown
 4. Adjust parameters using the GUI panel
+
+## Development
+
+The server watches for changes in:
+- HTML files
+- JavaScript files
+- GLSL shader files
+
+When you save any file, the browser will automatically reload. Perfect for tweaking shaders!
+
+**Note**: A local server is required because the shaders are loaded via fetch(), which doesn't work with the `file://` protocol.
 
 Requires a modern browser with WebGL support and microphone permissions.
 
