@@ -21,6 +21,7 @@
   </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/dat.gui@0.7.7/build/dat.gui.min.js"></script>
+  <script src="./shaders/shader-loader.js"></script>
   <script src="./base-threejs-visualization.js"></script>
   <script src="./fractal-visualization.js"></script>
   <script src="./shader-visualization.js"></script>
@@ -205,7 +206,7 @@
     return viewport.firstChild;
   }
 
-  function createViz(kind){
+  async function createViz(kind){
     if (currentViz) { currentViz.dispose(); currentViz = null; }
     const container = makeContainer();
     if (kind === 'fractal') currentViz = new FractalVisualization(container);
@@ -234,6 +235,10 @@
     else if (kind === 'lensflares') currentViz = new LensFlaresVisualization(container);
     else if (kind === 'spotlights') currentViz = new SpotlightsVisualization(container);
     else currentViz = new ParticleVisualization(container);
+
+    // Wait for async initialization to complete
+    await currentViz.initialize();
+
     if (AudioCtrl.analyser) currentViz.setAnalyser(AudioCtrl.ctx, AudioCtrl.analyser, AudioCtrl.fftSize);
     setupGUIForViz(kind);
     currentViz.start();
@@ -547,10 +552,10 @@
   }
 
   // UI wiring
-  vizSelect.addEventListener('change', e => { createViz(e.target.value); });
+  vizSelect.addEventListener('change', async e => { await createViz(e.target.value); });
   micBtn.addEventListener('click', async ()=>{
     await AudioCtrl.useMic();
-    if (!currentViz) createViz(vizSelect.value);
+    if (!currentViz) await createViz(vizSelect.value);
     if (AudioCtrl.ctx && AudioCtrl.ctx.state === 'suspended') await AudioCtrl.ctx.resume();
     currentViz.setAnalyser(AudioCtrl.ctx, AudioCtrl.analyser, AudioCtrl.fftSize);
     currentViz.start();
@@ -561,7 +566,7 @@
     audioEl.src = url; audioEl.loop = true;
     await audioEl.play().catch(()=>{});
     await AudioCtrl.useFile(audioEl);
-    if (!currentViz) createViz(vizSelect.value);
+    if (!currentViz) await createViz(vizSelect.value);
     if (AudioCtrl.ctx && AudioCtrl.ctx.state === 'suspended') await AudioCtrl.ctx.resume();
     currentViz.setAnalyser(AudioCtrl.ctx, AudioCtrl.analyser, AudioCtrl.fftSize);
     currentViz.start();
@@ -572,9 +577,11 @@
   });
 
   // Boot
-  vizSelect.value = 'feedback';
-  createViz(vizSelect.value);
-  updateMetrics();
+  (async () => {
+    vizSelect.value = 'feedback';
+    await createViz(vizSelect.value);
+    updateMetrics();
+  })();
 </script>
 </body>
 </html>
